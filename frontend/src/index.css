@@ -13,10 +13,22 @@
   }
   body {
     background-color: #111111;
-    color: #f5f5f5;
+    /* Base text — light gray, clearly visible on black */
+    color: #e5e5e5;
     font-family: "Inter", system-ui, sans-serif;
     overflow-x: hidden;
   }
+
+  /* Make sure all headings are pure white */
+  h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+  }
+
+  /* Paragraph text — readable on black */
+  p {
+    color: #d4d4d4;
+  }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: #1a1a1a; }
   ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 3px; }
@@ -25,9 +37,9 @@
 @layer components {
   /* Glass card */
   .glass {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
   }
   .glass-hover {
     @apply glass transition-all duration-300 hover:bg-white/5 hover:border-orange-500/30;
@@ -35,15 +47,15 @@
 
   /* Orange border glow */
   .neon-border {
-    border: 1px solid rgba(249,115,22,0.35);
+    border: 1px solid rgba(249,115,22,0.40);
     box-shadow: 0 0 18px rgba(249,115,22,0.08);
   }
   .neon-border:hover {
-    border-color: rgba(249,115,22,0.65);
+    border-color: rgba(249,115,22,0.70);
     box-shadow: 0 0 28px rgba(249,115,22,0.18);
   }
 
-  /* Buttons */
+  /* Primary button — orange bg, BLACK text (readable) */
   .btn-primary {
     @apply relative inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-black
            bg-gradient-to-r from-orange-500 to-orange-400
@@ -51,30 +63,37 @@
            transition-all duration-300 shadow-lg hover:shadow-orange-500/30 hover:scale-105
            focus:outline-none focus:ring-2 focus:ring-orange-500/50;
   }
+
+  /* Secondary button — transparent bg, orange text */
   .btn-secondary {
     @apply relative inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold
-           glass neon-border text-orange-400
-           hover:bg-orange-500/5 transition-all duration-300 hover:scale-105
+           bg-transparent border border-orange-500/40 text-orange-400
+           hover:bg-orange-500/10 hover:border-orange-500/70
+           transition-all duration-300 hover:scale-105
            focus:outline-none focus:ring-2 focus:ring-orange-500/30;
   }
 
-  /* Typography */
+  /* Section headings */
   .section-title {
     @apply font-display font-bold text-4xl md:text-5xl text-white leading-tight;
   }
+
+  /* Section subtext — bumped from zinc-400 to zinc-300 for visibility */
   .section-sub {
-    @apply text-zinc-400 text-lg leading-relaxed max-w-2xl;
+    @apply text-zinc-300 text-lg leading-relaxed max-w-2xl;
   }
+
   .card {
     @apply glass-hover rounded-2xl p-6 transition-all duration-300;
   }
+
   .badge {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
   }
 
-  /* Gradient text — orange to white */
+  /* Gradient text — orange to light orange (always visible on dark bg) */
   .gradient-text {
-    @apply bg-gradient-to-r from-orange-400 via-orange-300 to-white bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-orange-400 via-orange-300 to-orange-200 bg-clip-text text-transparent;
   }
 }
 
@@ -97,7 +116,7 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #f97316, #ffffff30, #fb923c, #f97316);
+  background: linear-gradient(135deg, #f97316, #fb923c80, #fb923c, #f97316);
   background-size: 300% 300%;
   animation: gradientX 4s ease infinite;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -110,3 +129,18 @@
 .score-bar-fill {
   transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ── Global text color overrides ────────────────────────────────────────────
+   Ensures text is never invisible on the black/dark backgrounds.
+   All "muted" text uses zinc-300 minimum (not zinc-400/500/600).
+*/
+
+/* Muted text — zinc-400 is too dark on #111, use zinc-300 */
+.text-zinc-400 { color: #d4d4d4 !important; }
+.text-zinc-500 { color: #a3a3a3 !important; }
+.text-zinc-600 { color: #737373 !important; }
+
+/* Slate colors used in older components */
+.text-slate-400 { color: #d4d4d4 !important; }
+.text-slate-500 { color: #a3a3a3 !important; }
+.text-slate-600 { color: #737373 !important; }
