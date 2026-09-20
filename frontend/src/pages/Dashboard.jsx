@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Globe, MessageSquare, TrendingUp,
-  Filter, RefreshCw, Download, CheckCircle,
+  RefreshCw, Download, CheckCircle,
   Clock, Mail, Phone, ExternalLink, Zap, ChevronDown,
   Star, AlertCircle, Wifi, WifiOff, Flame, ThumbsUp,
   XCircle, BarChart2, Shield, Info, Search,
@@ -458,33 +458,30 @@ export default function Dashboard() {
 
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="bg-[#1a1a1a] border border-white/6 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-3">
+          className="flex flex-col sm:flex-row gap-3">
           <SearchBar
             value={search}
             onChange={e => setSearch(e.target.value)}
             onClear={() => setSearch("")}
-            placeholder="Search by name or email…"
+            placeholder="Search leads..."
             className="flex-1"
           />
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-zinc-600 shrink-0" />
-            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
-              className="bg-[#222] border border-white/8 rounded-xl px-3 py-2.5 text-zinc-300 text-sm focus:outline-none focus:border-orange-500/40 cursor-pointer">
-              <option value="all">All Priorities</option>
-              <option value="high">🔥 High</option>
-              <option value="medium">👍 Medium</option>
-              <option value="unfiltered">⬜ Not Evaluated</option>
-            </select>
-          </div>
+          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
+            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
+            <option value="all">All Priorities</option>
+            <option value="high">🔥 High</option>
+            <option value="medium">👍 Medium</option>
+            <option value="unfiltered">⬜ Not Evaluated</option>
+          </select>
           <select value={filterService} onChange={e => setFilterService(e.target.value)}
-            className="bg-[#222] border border-white/8 rounded-xl px-3 py-2.5 text-zinc-300 text-sm focus:outline-none focus:border-orange-500/40 cursor-pointer">
+            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
             <option value="all">All Services</option>
             <option value="website">Website</option>
             <option value="whatsapp_bot">WhatsApp Bot</option>
             <option value="seo">SEO</option>
           </select>
           <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-            className="bg-[#222] border border-white/8 rounded-xl px-3 py-2.5 text-zinc-300 text-sm focus:outline-none focus:border-orange-500/40 cursor-pointer">
+            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
             <option value="all">All Tiers</option>
             <option value="hot">🔥 Hot ≥80%</option>
             <option value="warm">⭐ Warm</option>
