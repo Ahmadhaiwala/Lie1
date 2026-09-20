@@ -12,6 +12,7 @@ import { fetchLeads, fetchLeadStats, updateLead } from "../api/leads";
 import { checkBackendHealth } from "../api/client";
 import GlowOrb from "../components/GlowOrb";
 import SearchBar from "../components/SearchBar";
+import { DashboardCharactersDisplay } from "../components/DashboardCharacters";
 
 // ── Priority meta ─────────────────────────────────────────────────────────────
 const PRIORITY_META = {
@@ -403,6 +404,11 @@ export default function Dashboard() {
   return (
     <div className="relative min-h-screen pt-24 pb-20 overflow-hidden bg-[#111]">
       <GlowOrb className="w-96 h-96 -top-20 -right-32 opacity-20" color="orange" />
+
+      {/* Character overlays for visual interest */}
+      <div className="absolute bottom-0 right-0 w-2/3 h-2/3 flex items-end justify-end">
+        <DashboardCharactersDisplay />
+      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8">
 
