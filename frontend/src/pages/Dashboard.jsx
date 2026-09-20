@@ -322,15 +322,23 @@ export default function Dashboard() {
     setApiError(null);
     const healthy = await checkBackendHealth();
     setIsLive(healthy);
-    if (healthy) {
-      const [leadsRes, statsRes] = await Promise.all([fetchLeads({ limit: 500 }), fetchLeadStats()]);
-      if (leadsRes.error) { setApiError(leadsRes.error); setLeads(mockLeads); }
-      else                setLeads(leadsRes.data || []);
-      if (!statsRes.error && statsRes.data) setStats(statsRes.data);
-    } else {
+    
+    const [leadsRes, statsRes] = await Promise.all([fetchLeads({ limit: 500 }), fetchLeadStats()]);
+    
+    // ALWAYS use mock data as fallback when empty or error
+    if (leadsRes.error || !leadsRes.data || leadsRes.data.length === 0) {
       setLeads(mockLeads);
-      setApiError("Backend offline — showing demo data. Run: cd backend && python main.py");
+      if (healthy) {
+        setApiError("No real leads yet. Run a job to generate leads, or showing demo data.");
+      } else {
+        setApiError("Backend offline — showing demo data. Run: cd backend && python main.py");
+      }
+    } else {
+      setLeads(leadsRes.data);
     }
+    
+    if (!statsRes.error && statsRes.data) setStats(statsRes.data);
+    
     setLoading(false);
     setIsRefreshing(false);
   }, []);
