@@ -313,6 +313,7 @@ export default function Dashboard() {
   const [filterService,  setFilterService]  = useState("all");
   const [filterTier,     setFilterTier]     = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const [sortBy,         setSortBy]         = useState("priority"); // priority, score, recent, name
   const [showDiscard,    setShowDiscard]    = useState(false);
   const [isRefreshing,   setIsRefreshing]   = useState(false);
   const [apiError,       setApiError]       = useState(null);
@@ -366,11 +367,22 @@ export default function Dashboard() {
         return ms && sv && tr && pr;
       })
       .sort((a, b) => {
-        const o = { high: 0, medium: 1, unfiltered: 2, discard: 3 };
-        const d = (o[a.filter_priority || "unfiltered"] ?? 2) - (o[b.filter_priority || "unfiltered"] ?? 2);
-        return d !== 0 ? d : b.qualification_score - a.qualification_score;
+        // Apply sort based on sortBy
+        switch(sortBy) {
+          case "score":
+            return b.qualification_score - a.qualification_score;
+          case "recent":
+            return new Date(b.discovered_at) - new Date(a.discovered_at);
+          case "name":
+            return (a.business_name || "").localeCompare(b.business_name || "");
+          case "priority":
+          default:
+            const o = { high: 0, medium: 1, unfiltered: 2, discard: 3 };
+            const d = (o[a.filter_priority || "unfiltered"] ?? 2) - (o[b.filter_priority || "unfiltered"] ?? 2);
+            return d !== 0 ? d : b.qualification_score - a.qualification_score;
+        }
       });
-  }, [leads, search, filterService, filterTier, filterPriority, showDiscard]);
+  }, [leads, search, filterService, filterTier, filterPriority, showDiscard, sortBy]);
 
   const ds = stats || {
     total: leads.length,
@@ -466,53 +478,64 @@ export default function Dashboard() {
 
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-3">
-          <SearchBar
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onClear={() => setSearch("")}
-            placeholder="Search leads..."
-            className="flex-1"
-          />
-          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
-            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
-            <option value="all">All Priorities</option>
-            <option value="high">🔥 High</option>
-            <option value="medium">👍 Medium</option>
-            <option value="unfiltered">⬜ Not Evaluated</option>
-          </select>
-          <select value={filterService} onChange={e => setFilterService(e.target.value)}
-            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
-            <option value="all">All Services</option>
-            <option value="website">Website</option>
-            <option value="whatsapp_bot">WhatsApp Bot</option>
-            <option value="seo">SEO</option>
-          </select>
-          <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-            className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
-            <option value="all">All Tiers</option>
-            <option value="hot">🔥 Hot ≥80%</option>
-            <option value="warm">⭐ Warm</option>
-            <option value="cold">❄️ Cold</option>
-          </select>
+          className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <SearchBar
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onClear={() => setSearch("")}
+              placeholder="Search leads..."
+              className="flex-1"
+            />
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
+              <option value="priority">Sort: Priority</option>
+              <option value="score">Sort: Score</option>
+              <option value="recent">Sort: Recent</option>
+              <option value="name">Sort: Name</option>
+            </select>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
+              className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
+              <option value="all">All Priorities</option>
+              <option value="high">🔥 High</option>
+              <option value="medium">👍 Medium</option>
+              <option value="unfiltered">⬜ Not Evaluated</option>
+            </select>
+            <select value={filterService} onChange={e => setFilterService(e.target.value)}
+              className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
+              <option value="all">All Services</option>
+              <option value="website">Website</option>
+              <option value="whatsapp_bot">WhatsApp Bot</option>
+              <option value="seo">SEO</option>
+            </select>
+            <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
+              className="bg-[#1a1a1a] border-2 border-white/30 rounded-2xl px-5 py-3 text-white text-base font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 cursor-pointer hover:border-white/50 transition-all">
+              <option value="all">All Tiers</option>
+              <option value="hot">🔥 Hot ≥80%</option>
+              <option value="warm">⭐ Warm</option>
+              <option value="cold">❄️ Cold</option>
+            </select>
+          </div>
         </motion.div>
 
         {/* Results bar */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <p className="text-zinc-600 text-sm">
-            Showing <span className="text-white font-semibold">{filtered.length}</span> of {leads.length} leads
-          </p>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setShowDiscard(v => !v)}
-              className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-all ${showDiscard ? "bg-red-500/8 border-red-500/25 text-red-400" : "bg-white/4 border-white/8 text-zinc-500 hover:text-zinc-300"}`}>
-              <XCircle className="w-3.5 h-3.5" />
-              {showDiscard ? "Hiding" : "Show"} discarded ({ds.by_priority?.discard || 0})
-            </button>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-2 bg-[#1a1a1a] rounded-xl px-4 py-3 border border-white/5">
+          <div className="flex items-center gap-3">
+            <p className="text-zinc-600 text-sm">
+              Showing <span className="text-white font-semibold text-lg">{filtered.length}</span> of <span className="text-zinc-400">{leads.length}</span> leads
+            </p>
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-orange-400"}`} />
               <span className="text-zinc-600 text-xs">{isLive ? "Live" : "Demo"}</span>
             </div>
           </div>
+          <button onClick={() => setShowDiscard(v => !v)}
+            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-all ${showDiscard ? "bg-red-500/8 border-red-500/25 text-red-400" : "bg-white/4 border-white/8 text-zinc-500 hover:text-zinc-300"}`}>
+            <XCircle className="w-3.5 h-3.5" />
+            {showDiscard ? "Hiding" : "Show"} discarded ({ds.by_priority?.discard || 0})
+          </button>
         </div>
 
         {/* Lead cards */}

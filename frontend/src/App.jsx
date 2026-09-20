@@ -4,7 +4,6 @@ import ParticleBackground from "./components/ParticleBackground";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import RunAutomation from "./pages/RunAutomation";
-import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 
@@ -19,7 +18,6 @@ export default function App() {
             <Route path="/"          element={<LandingPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/run"       element={<RunAutomation />} />
-            <Route path="/analytics" element={<Analytics />} />
             <Route path="*"          element={<NotFound />} />
           </Routes>
         </main>

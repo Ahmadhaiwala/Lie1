@@ -66,8 +66,33 @@ function JobCard({ job, selected, onToggle }) {
 }
 
 function LogTerminal({ lines, running }) {
+  const containerRef = useRef(null);
   const bottomRef = useRef(null);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [lines]);
+  const shouldAutoScrollRef = useRef(true);
+
+  // Auto-scroll only if user is at the bottom
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+    
+    const container = containerRef.current;
+    if (container) {
+      // Use setTimeout to ensure scroll happens after render
+      const timer = setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [lines]);
+
+  // Track if user is scrolling
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    // Check if user is near the bottom (within 50px)
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    shouldAutoScrollRef.current = isNearBottom;
+  };
 
   const color = (line) => {
     if (line.includes("[SUCCESS]") || line.includes("✓")) return "text-orange-400";
@@ -77,7 +102,11 @@ function LogTerminal({ lines, running }) {
   };
 
   return (
-    <div className="bg-black rounded-xl border border-white/6 p-4 font-mono text-xs h-64 overflow-y-auto">
+    <div 
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="bg-black rounded-xl border border-white/6 p-4 font-mono text-xs h-64 overflow-y-auto scroll-smooth"
+    >
       <div className="flex items-center gap-1.5 mb-3 pb-3 border-b border-white/5">
         <span className="w-3 h-3 rounded-full bg-red-500/60" />
         <span className="w-3 h-3 rounded-full bg-yellow-500/60" />
