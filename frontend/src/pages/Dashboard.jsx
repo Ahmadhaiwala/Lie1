@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Globe, MessageSquare, TrendingUp,
-  Search, Filter, RefreshCw, Download, CheckCircle,
+  Filter, RefreshCw, Download, CheckCircle,
   Clock, Mail, Phone, ExternalLink, Zap, ChevronDown,
   Star, AlertCircle, Wifi, WifiOff, Flame, ThumbsUp,
   XCircle, BarChart2, Shield, Info,
@@ -11,6 +11,7 @@ import { mockLeads } from "../data/mockLeads";
 import { fetchLeads, fetchLeadStats, updateLead } from "../api/leads";
 import { checkBackendHealth } from "../api/client";
 import GlowOrb from "../components/GlowOrb";
+import SearchBar from "../components/SearchBar";
 
 // ── Priority meta ─────────────────────────────────────────────────────────────
 const PRIORITY_META = {
@@ -458,12 +459,13 @@ export default function Dashboard() {
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
           className="bg-[#1a1a1a] border border-white/6 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name or email…"
-              className="w-full bg-white/4 border border-white/8 rounded-xl pl-9 pr-4 py-2.5 text-white placeholder-zinc-700 text-sm focus:outline-none focus:border-orange-500/40 transition-all" />
-          </div>
+          <SearchBar
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onClear={() => setSearch("")}
+            placeholder="Search by name or email…"
+            className="flex-1"
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-zinc-600 shrink-0" />
             <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
