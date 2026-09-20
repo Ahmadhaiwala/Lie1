@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Zap, ArrowRight, Play, Globe, MessageSquare, TrendingUp } from "lucide-react";
-import GlowOrb from "../components/GlowOrb";
+import Mascot from "../components/Mascot";
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 40 },
@@ -14,143 +14,177 @@ const services = [
   { icon: TrendingUp,    label: "SEO Services",          color: "text-orange-300" },
 ];
 
+const stats = [
+  { value: "1,200+", label: "Leads/day"    },
+  { value: "98%",    label: "Accuracy"     },
+  { value: "3",      label: "Services"     },
+  { value: "24/7",   label: "Runs Always"  },
+];
+
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      {/* Grid + radial glow */}
+      {/* Grid bg */}
       <div className="absolute inset-0 bg-grid-dark bg-grid opacity-100" aria-hidden="true" />
       <div className="absolute inset-0 bg-radial-glow"                   aria-hidden="true" />
 
-      {/* Orbs */}
-      <GlowOrb className="w-[500px] h-[500px] -top-40 -left-40"  color="orange" />
-      <GlowOrb className="w-80    h-80    top-1/3  -right-20"    color="white"  />
-      <GlowOrb className="w-64    h-64    bottom-10 left-1/4"    color="dark"   />
+      {/* Ambient blobs */}
+      <div className="absolute w-[500px] h-[500px] rounded-full bg-orange-500/8 blur-3xl -top-40 -left-40 pointer-events-none" />
+      <div className="absolute w-72 h-72 rounded-full bg-orange-400/6 blur-3xl bottom-20 -right-20 pointer-events-none" />
 
-      {/* Floating badges */}
-      <motion.div
-        animate={{ y: [0, -12, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-28 left-6 md:left-24 hidden sm:block"
-      >
-        <div className="bg-black/70 border border-orange-500/30 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm backdrop-blur-sm">
-          <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-          <span className="text-zinc-200">247 leads found today</span>
-        </div>
-      </motion.div>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
-      <motion.div
-        animate={{ y: [0, 10, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute top-40 right-6 md:right-24 hidden sm:block"
-      >
-        <div className="bg-black/70 border border-white/10 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm backdrop-blur-sm">
-          <Zap className="w-4 h-4 text-orange-400 fill-orange-400" />
-          <span className="text-zinc-200">AI-powered automation</span>
-        </div>
-      </motion.div>
+          {/* ── LEFT — copy ─────────────────────────────────────────────── */}
+          <div>
+            {/* Badge */}
+            <motion.div {...fadeUp(0.1)} className="inline-flex items-center gap-2 mb-8">
+              <span className="bg-orange-500/12 border border-orange-500/30 rounded-full px-5 py-2 text-sm font-medium text-orange-300 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                AI-Powered Lead Generation
+              </span>
+            </motion.div>
 
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute bottom-32 right-10 md:right-32 hidden md:block"
-      >
-        <div className="bg-black/70 border border-white/10 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm backdrop-blur-sm">
-          <span className="text-orange-400 font-bold text-xs">98%</span>
-          <span className="text-zinc-200">qualify rate</span>
-        </div>
-      </motion.div>
-
-      {/* Main content */}
-      <div className="relative z-10 text-center px-4 sm:px-6 max-w-5xl mx-auto">
-
-        {/* Pill */}
-        <motion.div {...fadeUp(0.1)} className="inline-flex items-center gap-2 mb-8">
-          <span className="bg-orange-500/10 border border-orange-500/30 rounded-full px-5 py-2 text-sm font-medium text-orange-300 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-            Automated Lead Generation · Powered by AI
-          </span>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          {...fadeUp(0.2)}
-          className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white leading-[1.05] mb-6"
-        >
-          Find Clients Who
-          <br />
-          <span className="gradient-text">Need Your Services</span>
-          <br />
-          <span className="text-zinc-500 text-4xl sm:text-5xl md:text-6xl font-bold">
-            On Autopilot
-          </span>
-        </motion.h1>
-
-        {/* Subheading */}
-        <motion.p
-          {...fadeUp(0.35)}
-          className="text-zinc-400 text-lg sm:text-xl max-w-2xl mx-auto mb-8 leading-relaxed"
-        >
-          Our AI crawls the web 24/7, finds businesses that need websites,
-          WhatsApp bots, or SEO — and drafts personalised outreach for each one.
-          You just close the deals.
-        </motion.p>
-
-        {/* Service pills */}
-        <motion.div {...fadeUp(0.45)} className="flex flex-wrap justify-center gap-3 mb-10">
-          {services.map(({ icon: Icon, label, color }) => (
-            <span
-              key={label}
-              className={`flex items-center gap-2 bg-white/5 border border-white/8 rounded-full px-4 py-2 text-sm font-medium ${color}`}
+            {/* Headline */}
+            <motion.h1
+              {...fadeUp(0.2)}
+              className="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl text-white leading-[1.05] mb-6"
             >
-              <Icon className="w-4 h-4" />
-              {label}
-            </span>
-          ))}
-        </motion.div>
+              Find Clients
+              <br />
+              <span className="gradient-text">Who Need You</span>
+              <br />
+              <span className="text-zinc-400 text-4xl sm:text-5xl font-bold">
+                — Automatically
+              </span>
+            </motion.h1>
 
-        {/* CTAs */}
-        <motion.div
-          {...fadeUp(0.55)}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
-        >
-          <motion.a
-            href="/dashboard"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            className="btn-primary text-base px-8 py-4 shadow-2xl shadow-orange-500/25 group"
-          >
-            <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            View Dashboard
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </motion.a>
-          <motion.a
-            href="/#how-it-works"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            className="btn-secondary text-base px-8 py-4"
-          >
-            <Play className="w-5 h-5 fill-orange-400" />
-            How It Works
-          </motion.a>
-        </motion.div>
+            {/* Sub */}
+            <motion.p
+              {...fadeUp(0.3)}
+              className="text-zinc-300 text-lg sm:text-xl max-w-xl mb-8 leading-relaxed"
+            >
+              Our AI crawls the web 24/7 finding businesses that need
+              websites, WhatsApp bots, or SEO. Each lead comes with
+              contact details and a personalised outreach draft.
+              <strong className="text-white"> You just close the deals.</strong>
+            </motion.p>
 
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="mt-20 flex flex-col items-center gap-2"
-        >
-          <span className="text-zinc-600 text-xs uppercase tracking-widest">Scroll</span>
+            {/* Service pills */}
+            <motion.div {...fadeUp(0.4)} className="flex flex-wrap gap-2 mb-10">
+              {services.map(({ icon: Icon, label, color }) => (
+                <span key={label}
+                  className={`flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm font-medium ${color}`}>
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </span>
+              ))}
+            </motion.div>
+
+            {/* CTA buttons */}
+            <motion.div {...fadeUp(0.5)} className="flex flex-col sm:flex-row gap-4 mb-12">
+              <motion.a
+                href="/dashboard"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="btn-primary text-base px-8 py-4 shadow-2xl shadow-orange-500/20 group"
+              >
+                <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                View Dashboard
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </motion.a>
+              <motion.a
+                href="/#how-it-works"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="btn-secondary text-base px-8 py-4"
+              >
+                <Play className="w-5 h-5 fill-orange-400" />
+                How It Works
+              </motion.a>
+            </motion.div>
+
+            {/* Mini stats row */}
+            <motion.div
+              {...fadeUp(0.6)}
+              className="grid grid-cols-4 gap-4 border-t border-white/8 pt-8"
+            >
+              {stats.map(({ value, label }) => (
+                <div key={label} className="text-center">
+                  <p className="font-display font-bold text-2xl text-orange-400">{value}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{label}</p>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* ── RIGHT — mascot ──────────────────────────────────────────── */}
           <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-5 h-8 rounded-full border border-zinc-700 flex items-start justify-center pt-1.5"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center justify-center gap-6"
           >
-            <div className="w-1 h-2 rounded-full bg-orange-400" />
+            {/* Mascot with glow */}
+            <div className="relative flex items-center justify-center">
+              {/* Big outer glow */}
+              <div className="absolute w-80 h-80 rounded-full bg-orange-500/10 blur-3xl" />
+              {/* Dashed orbit ring */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute w-72 h-72 rounded-full border border-dashed border-orange-500/20"
+              />
+              {/* Solid ring */}
+              <motion.div
+                animate={{ scale: [1, 1.04, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="absolute w-60 h-60 rounded-full border-2 border-orange-500/40"
+              />
+
+              <Mascot size={220} animate ring />
+            </div>
+
+            {/* Floating info cards around mascot */}
+            <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+              {[
+                { label: "Leads found today",  value: "247",    icon: "🎯", color: "border-orange-500/30 bg-orange-500/5" },
+                { label: "High priority",       value: "89",     icon: "🔥", color: "border-white/15 bg-white/3"           },
+                { label: "Outreach ready",      value: "156",    icon: "✉️", color: "border-white/15 bg-white/3"           },
+                { label: "Filter accuracy",     value: "98%",    icon: "✅", color: "border-orange-500/25 bg-orange-500/5" },
+              ].map(({ label, value, icon, color }) => (
+                <motion.div
+                  key={label}
+                  whileHover={{ scale: 1.04, y: -2 }}
+                  className={`rounded-xl p-3 border ${color} text-center transition-all duration-200`}
+                >
+                  <span className="text-lg">{icon}</span>
+                  <p className="font-bold text-white text-lg mt-1">{value}</p>
+                  <p className="text-zinc-500 text-xs">{label}</p>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
-        </motion.div>
+
+        </div>
       </div>
+
+      {/* Scroll hint */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+      >
+        <span className="text-zinc-600 text-xs uppercase tracking-widest">Scroll</span>
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="w-5 h-8 rounded-full border border-zinc-700 flex items-start justify-center pt-1.5"
+        >
+          <div className="w-1 h-2 rounded-full bg-orange-400" />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

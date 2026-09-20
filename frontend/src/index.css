@@ -97,6 +97,49 @@
   }
 }
 
+/* ── Input & form field styling ─────────────────────────────────────────────
+   Fix blue background on autofill, ensure typed text is always visible.
+*/
+
+input,
+textarea,
+select {
+  /* Typed text must be light */
+  color: #ffffff !important;
+  caret-color: #f97316 !important;  /* orange cursor */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #737373 !important;  /* placeholder is dimmer */
+}
+
+/* Chrome/Safari autofill — override the hideous blue bg */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #1a1a1a inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Firefox autofill */
+input:-moz-autofill {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* Select dropdown text */
+select {
+  background-color: #222222 !important;
+  color: #ffffff !important;
+}
+
+select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
 /* Particle canvas */
 #particle-canvas {
   position: fixed;

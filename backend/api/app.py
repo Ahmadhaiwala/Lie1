@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes.health import router as health_router
 from api.routes.leads  import router as leads_router
 from api.routes.jobs   import router as jobs_router
+from api.routes.contact import router as contact_router
 from api.deps          import get_scheduler
 
 
@@ -60,8 +61,9 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(health_router)
-    app.include_router(leads_router,  prefix="/api/v1")
-    app.include_router(jobs_router,   prefix="/api/v1")
+    app.include_router(leads_router,   prefix="/api/v1")
+    app.include_router(jobs_router,    prefix="/api/v1")
+    app.include_router(contact_router, prefix="/api/v1")
 
     @app.get("/", include_in_schema=False)
     async def root():

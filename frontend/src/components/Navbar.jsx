@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Menu, X, Play } from "lucide-react";
+import { Menu, X, Play, BarChart2 } from "lucide-react";
+import Mascot from "./Mascot";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -18,8 +19,9 @@ export default function Navbar() {
     { to: "/",              label: "Home",         isHash: false },
     { to: "/#services",     label: "Services",     isHash: true  },
     { to: "/#how-it-works", label: "How It Works", isHash: true  },
-    { to: "/#contact",      label: "Contact",      isHash: true  },
     { to: "/dashboard",     label: "Dashboard",    isHash: false },
+    { to: "/analytics",     label: "Analytics",    isHash: false },
+    { to: "/#contact",      label: "Contact",      isHash: true  },
   ];
 
   return (
@@ -28,29 +30,24 @@ export default function Navbar() {
       animate={{ y: 0,   opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-black/80 backdrop-blur-md border-b border-white/8 shadow-lg"
-          : "bg-transparent"
+        scrolled ? "bg-black/85 backdrop-blur-md border-b border-white/8 shadow-lg" : "bg-transparent"
       }`}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
-        {/* Logo */}
-        <a href="/" className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ rotate: 15, scale: 1.1 }}
-            className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center"
-          >
-            <Zap className="w-4 h-4 text-black fill-black" />
-          </motion.div>
-          <span className="font-display font-bold text-xl text-white">
+        {/* Logo with mini mascot */}
+        <a href="/" className="flex items-center gap-2.5 group">
+          <div className="w-9 h-9 relative">
+            <Mascot size={36} animate={false} ring={false} />
+          </div>
+          <span className="font-display font-bold text-xl text-white leading-none">
             Lead<span className="text-orange-400">Bot</span>
-            <span className="text-orange-500">AI</span>
+            <span className="text-orange-500 text-sm font-semibold ml-0.5">AI</span>
           </span>
         </a>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-0.5">
           {links.map(({ to, label, isHash }) => (
             <a
               key={label}
@@ -58,7 +55,7 @@ export default function Navbar() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 !isHash && pathname === to
                   ? "text-white bg-orange-500/15 border border-orange-500/30"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  : "text-zinc-300 hover:text-white hover:bg-white/5"
               }`}
             >
               {label}
@@ -81,9 +78,8 @@ export default function Navbar() {
             href="/#contact"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
-            className="btn-primary text-sm py-2"
+            className="btn-primary text-sm py-2 px-5"
           >
-            <Zap className="w-4 h-4" />
             Get Started
           </motion.a>
         </div>
@@ -105,25 +101,31 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{   opacity: 0, height: 0 }}
-            className="md:hidden bg-black/90 border-b border-white/8 backdrop-blur-md"
+            className="md:hidden bg-black/95 border-b border-white/8 backdrop-blur-md"
           >
-            <div className="px-4 py-4 flex flex-col gap-2">
+            <div className="px-4 py-4 flex flex-col gap-1.5">
               {links.map(({ to, label }) => (
                 <a
                   key={label}
                   href={to}
                   onClick={() => setOpen(false)}
-                  className="px-4 py-2.5 rounded-lg text-zinc-300 hover:text-white hover:bg-white/5 text-sm transition-all"
+                  className={`px-4 py-2.5 rounded-lg text-sm transition-all ${
+                    pathname === to
+                      ? "text-white bg-orange-500/15 border border-orange-500/25"
+                      : "text-zinc-300 hover:text-white hover:bg-white/5"
+                  }`}
                 >
                   {label}
                 </a>
               ))}
-              <a href="/run" className="btn-secondary mt-1 justify-center text-sm">
-                <Play className="w-4 h-4 fill-orange-400" /> Run Jobs
-              </a>
-              <a href="/#contact" className="btn-primary mt-1 justify-center text-sm">
-                <Zap className="w-4 h-4" /> Get Started
-              </a>
+              <div className="flex gap-2 mt-2">
+                <a href="/run"       className="btn-secondary text-sm py-2.5 flex-1 justify-center">
+                  <Play className="w-4 h-4 fill-orange-400" /> Run Jobs
+                </a>
+                <a href="/#contact"  className="btn-primary  text-sm py-2.5 flex-1 justify-center">
+                  Get Started
+                </a>
+              </div>
             </div>
           </motion.div>
         )}
