@@ -107,6 +107,7 @@ select {
   /* Typed text must be light */
   color: #ffffff !important;
   caret-color: #f97316 !important;  /* orange cursor */
+  background-color: #1a1a1a !important;  /* black background */
 }
 
 input::placeholder,
@@ -131,7 +132,7 @@ input:-moz-autofill {
 
 /* Select dropdown text */
 select {
-  background-color: #222222 !important;
+  background-color: #1a1a1a !important;
   color: #ffffff !important;
 }
 

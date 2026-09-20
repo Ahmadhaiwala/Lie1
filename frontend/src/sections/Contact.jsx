@@ -125,7 +125,7 @@ export default function Contact() {
                           name={f.name} type={f.type} required
                           value={form[f.name]} onChange={handleChange}
                           placeholder={f.placeholder}
-                          className="w-full bg-white/4 border border-white/8 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500/50 transition-all"
+                          className="w-full bg-[#1a1a1a] border border-white/8 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500/50 transition-all"
                         />
                       </div>
                     ))}
@@ -134,7 +134,7 @@ export default function Contact() {
                   <div>
                     <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Service</label>
                     <select name="service" required value={form.service} onChange={handleChange}
-                      className="w-full bg-[#222] border border-white/8 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500/50 transition-all cursor-pointer">
+                      className="w-full bg-[#1a1a1a] border border-white/8 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500/50 transition-all cursor-pointer">
                       <option value="" disabled>Select a service…</option>
                       {services.map(s => <option key={s} value={s} className="bg-[#1a1a1a]">{s}</option>)}
                     </select>
@@ -144,7 +144,7 @@ export default function Contact() {
                     <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Message (optional)</label>
                     <textarea name="message" rows={4} value={form.message} onChange={handleChange}
                       placeholder="Target industry, city, budget, leads per day…"
-                      className="w-full bg-white/4 border border-white/8 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500/50 transition-all resize-none" />
+                      className="w-full bg-[#1a1a1a] border border-white/8 rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500/50 transition-all resize-none" />
                   </div>
 
                   {error && <p className="text-red-400 text-sm">{error}</p>}
