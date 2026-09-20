@@ -19,7 +19,7 @@ from typing import List, Optional, Dict, Any
 
 from crawler.web_crawler import WebCrawler
 from crawler.config import CrawlerConfig
-from llm.llm_client import LLMClient
+from llm.llm_provider import LLMProvider
 from llm.llm_config import LLMConfig
 from automation.search_provider import SearchProvider
 
@@ -123,7 +123,7 @@ class BaseLeadJob:
             page_timeout=20000,
         )
         self.llm_config = llm_config or LLMConfig.from_env()
-        self.llm = LLMClient(self.llm_config)
+        self.llm = LLMProvider(self.llm_config)
         self.search_provider = SearchProvider()
         self.custom_queries = [query.strip() for query in (custom_queries or []) if query.strip()]
 
@@ -600,6 +600,7 @@ Return JSON:
                 # Filter results before processing
                 filtered_results = []
                 for item in results:
+<<<<<<< HEAD
                     url = item["url"]
                     
                     # Skip content sources
@@ -624,13 +625,49 @@ Return JSON:
                             url=url,
                             candidate=item  # Pass full item with lat/lng/distance
                         )
+=======
+                    # Extract contact info directly from API result
+                    url = item.get("website") or item.get("url", "")
+                    business_name = item.get("name", "Unknown")
+                    phone = item.get("phone", "")
+                    email = item.get("email", "")
+                    address = item.get("address", "")
+                    rating = item.get("rating", "N/A")
+                    
+                    # Skip if no contact info
+                    if not (phone or email):
+                        logger.debug("[%s] Skipping %s - no phone or email", self.JOB_NAME, business_name)
+                        continue
+                    
+                    try:
+                        # Qualify based on content
+                        lead = await self._qualify_lead(item.get("content", "")[:6000], url or business_name)
+>>>>>>> bee865b1c38482700b7eadb39e940580c6cd2cdc
                         if lead:
+                            # Override with actual contact info from API
+                            lead.business_name = business_name
+                            lead.contact_phone = [phone] if phone else []
+                            lead.contact_email = [email] if email else []
+                            lead.website = url
+                            lead.source_url = url or business_name
+                            
                             leads.append(lead)
+<<<<<<< HEAD
                             logger.info("[%s] Lead found: %s (score=%.2f, distance=%.1fkm)", 
                                       self.JOB_NAME, lead.business_name, lead.qualification_score, 
                                       lead.distance_km if lead.distance_km else 0)
+=======
+                            logger.info(
+                                "[%s] Lead found: %s | Phone: %s | Email: %s (score=%.2f)", 
+                                self.JOB_NAME, 
+                                business_name, 
+                                phone or "N/A",
+                                email or "N/A",
+                                lead.qualification_score
+                            )
+>>>>>>> bee865b1c38482700b7eadb39e940580c6cd2cdc
                     except Exception as exc:
-                        err = f"API result qualification error [{url}]: {exc}"
+                        err = f"API result qualification error [{business_name}]: {exc}"
                         logger.error(err)
                         errors.append(err)
             except Exception as exc:

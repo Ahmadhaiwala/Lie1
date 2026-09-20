@@ -1,5 +1,5 @@
 """
-LLM Configuration
+LLM Configuration - Supports OpenRouter (cloud) and Ollama (local) fallback
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -33,6 +33,11 @@ class LLMConfig:
     max_retries: int = 3
     timeout: int = 60
     
+    # Ollama Fallback
+    use_ollama_fallback: bool = True
+    ollama_model: str = "phi4-mini"
+    ollama_url: str = "http://localhost:11434"
+    
     @classmethod
     def from_env(cls) -> 'LLMConfig':
         """Create config from environment variables"""
@@ -42,9 +47,12 @@ class LLMConfig:
         
         return cls(
             api_key=api_key,
-            model=os.getenv('DEFAULT_MODEL', 'meta-llama/llama-3.2-3b-instruct'),
+            model=os.getenv('DEFAULT_MODEL', 'qwen/qwen-2.5-7b-instruct'),
             temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
             max_tokens=int(os.getenv('LLM_MAX_TOKENS', '4096')),
+            use_ollama_fallback=os.getenv('USE_OLLAMA_FALLBACK', 'true').lower() == 'true',
+            ollama_model=os.getenv('OLLAMA_MODEL', 'phi4-mini'),
+            ollama_url=os.getenv('OLLAMA_URL', 'http://localhost:11434'),
         )
     
     def to_dict(self) -> dict:
