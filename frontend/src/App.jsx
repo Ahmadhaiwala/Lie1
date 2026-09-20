@@ -3,6 +3,8 @@ import Navbar from "./components/Navbar";
 import ParticleBackground from "./components/ParticleBackground";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
+import RunAutomation from "./pages/RunAutomation";
+import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 
 export default function App() {
@@ -13,8 +15,10 @@ export default function App() {
         <Navbar />
         <main className="relative z-10">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/"          element={<LandingPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/run"       element={<RunAutomation />} />
+            <Route path="*"          element={<NotFound />} />
           </Routes>
         </main>
         <Footer />

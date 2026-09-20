@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Menu, X, LayoutDashboard, Home } from "lucide-react";
+import { Zap, Menu, X, LayoutDashboard, Home, Play } from "lucide-react";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -15,12 +15,15 @@ export default function Navbar() {
   }, []);
 
   const links = [
-    { to: "/", label: "Home", icon: Home },
-    { to: "/#services", label: "Services", icon: null },
-    { to: "/#how-it-works", label: "How It Works", icon: null },
-    { to: "/#contact", label: "Contact", icon: null },
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/",           label: "Home",       isHash: false },
+    { to: "/#services",  label: "Services",   isHash: true  },
+    { to: "/#how-it-works", label: "How It Works", isHash: true },
+    { to: "/#contact",   label: "Contact",    isHash: true  },
+    { to: "/dashboard",  label: "Dashboard",  isHash: false, icon: LayoutDashboard },
+    { to: "/run",        label: "Run Jobs",   isHash: false, icon: Play, highlight: true },
   ];
+
+  const isActive = (to) => pathname === to;
 
   return (
     <motion.header
@@ -33,7 +36,7 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
+        <a href="/" className="flex items-center gap-2 group">
           <motion.div
             whileHover={{ rotate: 20, scale: 1.1 }}
             className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-neon flex items-center justify-center"
@@ -44,16 +47,16 @@ export default function Navbar() {
             Lead<span className="gradient-text">Bot</span>
             <span className="text-brand-400 ml-0.5">AI</span>
           </span>
-        </Link>
+        </a>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {links.map(({ to, label }) => (
+          {links.filter(l => !l.highlight).map(({ to, label, isHash }) => (
             <a
               key={label}
               href={to}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                pathname === to
+                !isHash && isActive(to)
                   ? "text-white bg-brand-500/20"
                   : "text-slate-400 hover:text-white hover:bg-white/5"
               }`}
@@ -63,8 +66,17 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* CTA */}
+        {/* CTA buttons */}
         <div className="hidden md:flex items-center gap-3">
+          <motion.a
+            href="/run"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            className="btn-secondary text-sm py-2 px-4"
+          >
+            <Play className="w-4 h-4 fill-neon" />
+            Run Jobs
+          </motion.a>
           <motion.a
             href="/#contact"
             whileHover={{ scale: 1.05 }}
@@ -96,12 +108,16 @@ export default function Navbar() {
             className="md:hidden glass border-b border-white/5"
           >
             <div className="px-4 py-4 flex flex-col gap-2">
-              {links.map(({ to, label, icon: Icon }) => (
+              {links.map(({ to, label, icon: Icon, highlight }) => (
                 <a
                   key={label}
                   href={to}
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-all ${
+                    highlight
+                      ? "text-neon border border-neon/20 bg-neon/5"
+                      : "text-slate-300 hover:text-white hover:bg-white/5"
+                  }`}
                 >
                   {Icon && <Icon className="w-4 h-4" />}
                   {label}
