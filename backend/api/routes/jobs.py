@@ -151,7 +151,10 @@ async def job_status(job_id: str):
     """Return the current state of a job (status, progress, log_lines, result)."""
     job = get_job(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found. Job status is kept in memory and is cleared when the backend restarts.",
+        )
     return job.to_dict()
 
 

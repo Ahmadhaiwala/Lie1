@@ -1,12 +1,14 @@
 """
-LLM Configuration
+LLM Configuration - Supports OpenRouter (cloud) and Ollama (local) fallback
 """
 from dataclasses import dataclass
 from typing import Optional
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Always load .env from the backend/ root, regardless of working directory
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 @dataclass
@@ -30,6 +32,11 @@ class LLMConfig:
     # Retry Settings
     max_retries: int = 3
     timeout: int = 60
+    
+    # Ollama Fallback
+    use_ollama_fallback: bool = True
+    ollama_model: str = "phi4-mini"
+    ollama_url: str = "http://localhost:11434"
     
     @classmethod
     def from_env(cls) -> 'LLMConfig':
@@ -55,7 +62,10 @@ class LLMConfig:
             base_url=base_url,
             model=model,
             temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
-            max_tokens=int(os.getenv('LLM_MAX_TOKENS', '2048')),  # Reduced for local inference
+            max_tokens=int(os.getenv('LLM_MAX_TOKENS', '4096')),
+            use_ollama_fallback=os.getenv('USE_OLLAMA_FALLBACK', 'true').lower() == 'true',
+            ollama_model=os.getenv('OLLAMA_MODEL', 'phi4-mini'),
+            ollama_url=os.getenv('OLLAMA_URL', 'http://localhost:11434'),
         )
     
     def to_dict(self) -> dict:

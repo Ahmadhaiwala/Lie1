@@ -61,9 +61,13 @@ export async function pollJobUntilDone(jobId, onUpdate, { intervalMs = 1500, tim
         return;
       }
 
-      const { data, error } = await fetchJobStatus(jobId);
+      const { data, error, status } = await fetchJobStatus(jobId);
 
       if (error) {
+        if (status === 404) {
+          reject(new Error(error));
+          return;
+        }
         // Backend unreachable — keep trying
         setTimeout(tick, intervalMs * 2);
         return;

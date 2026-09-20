@@ -19,8 +19,9 @@ from typing import List, Optional, Dict, Any
 
 from crawler.web_crawler import WebCrawler
 from crawler.config import CrawlerConfig
-from llm.llm_client import LLMClient
+from llm.llm_provider import LLMProvider
 from llm.llm_config import LLMConfig
+from automation.search_provider import SearchProvider
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,8 @@ class BaseLeadJob:
             page_timeout=20000,
         )
         self.llm_config = llm_config or LLMConfig.from_env()
-        self.llm = LLMClient(self.llm_config)
+        self.llm = LLMProvider(self.llm_config)
+        self.search_provider = SearchProvider()
 
     # ------------------------------------------------------------------
     # Subclass contracts
@@ -221,6 +223,71 @@ Return ONLY valid JSON, no extra text."""
         )
         return lead
 
+    async def _run_with_search_api(self, started_at: str) -> JobResult:
+        """Discover and qualify leads from API results without starting Playwright."""
+        leads: List[Lead] = []
+        errors: List[str] = []
+        logger.info("[%s] Using %s for discovery; Playwright is not started.", self.JOB_NAME, self.search_provider.name)
+
+        for query in self.search_queries:
+            try:
+                results = await self.search_provider.search(query, self.RESULTS_PER_QUERY)
+                logger.info("[%s] Query '%s' returned %d API results", self.JOB_NAME, query, len(results))
+                for item in results:
+                    # Extract contact info directly from API result
+                    url = item.get("website") or item.get("url", "")
+                    business_name = item.get("name", "Unknown")
+                    phone = item.get("phone", "")
+                    email = item.get("email", "")
+                    address = item.get("address", "")
+                    rating = item.get("rating", "N/A")
+                    
+                    # Skip only if business name is Unknown (means API returned nothing useful)
+                    if business_name == "Unknown":
+                        logger.debug("[%s] Skipping - no business name", self.JOB_NAME)
+                        continue
+                    
+                    try:
+                        # Qualify based on content
+                        lead = await self._qualify_lead(item.get("content", "")[:6000], url or business_name)
+                        if lead:
+                            # Override with actual contact info from API
+                            lead.business_name = business_name
+                            lead.contact_phone = [phone] if phone else []
+                            lead.contact_email = [email] if email else []
+                            lead.website = url
+                            lead.source_url = url or business_name
+                            
+                            leads.append(lead)
+                            logger.info(
+                                "[%s] Lead found: %s | Phone: %s | Email: %s | Website: %s (score=%.2f)", 
+                                self.JOB_NAME, 
+                                business_name, 
+                                phone or "N/A",
+                                email or "N/A",
+                                url or "N/A",
+                                lead.qualification_score
+                            )
+                    except Exception as exc:
+                        err = f"API result qualification error [{business_name}]: {exc}"
+                        logger.error(err)
+                        errors.append(err)
+            except Exception as exc:
+                err = f"API search error [{query}]: {exc}"
+                logger.error(err)
+                errors.append(err)
+
+        result = JobResult(
+            job_name=self.JOB_NAME,
+            started_at=started_at,
+            finished_at=datetime.utcnow().isoformat(),
+            leads_found=len(leads),
+            leads=leads,
+            errors=errors,
+        )
+        logger.info("[%s] Done - %d leads found, %d errors", self.JOB_NAME, len(leads), len(errors))
+        return result
+
     async def run(self) -> JobResult:
         """Execute the job end-to-end and return a JobResult."""
         started_at = datetime.utcnow().isoformat()
@@ -228,6 +295,14 @@ Return ONLY valid JSON, no extra text."""
         errors: List[str] = []
 
         logger.info("[%s] Starting job with %d queries", self.JOB_NAME, len(self.search_queries))
+
+        if self.search_provider.configured:
+            return await self._run_with_search_api(started_at)
+
+        logger.warning(
+            "[%s] SERPAPI_API_KEY and GOOGLE_MAPS_API_KEY are not configured; falling back to browser crawling.",
+            self.JOB_NAME,
+        )
 
         async with WebCrawler(self.crawler_config) as crawler:
             for query in self.search_queries:
@@ -275,12 +350,12 @@ Return ONLY valid JSON, no extra text."""
 
 class WebsiteLeadJob(BaseLeadJob):
     """
-    Finds businesses that:
+    Finds businesses in Ahmedabad that:
     - Have no website at all (social-media-only presence)
     - Have an outdated/broken website (last decade design, no mobile support)
     - Are actively asking for help getting a website
 
-    Targets small businesses, local shops, freelancers, restaurants, etc.
+    Targets small businesses, local shops, freelancers, restaurants, etc. in Ahmedabad
     """
 
     JOB_NAME = "website_lead_job"
@@ -289,39 +364,39 @@ class WebsiteLeadJob(BaseLeadJob):
     @property
     def search_queries(self) -> List[str]:
         return [
-            "small business no website need web design",
-            "local restaurant no website contact us facebook",
-            "startup needs website development affordable",
-            "business owner looking for website developer freelance",
-            "ecommerce store setup help needed no website yet",
-            "we don't have a website yet contact us",
-            "our website is outdated need redesign",
-            "need a professional website for my business",
+            "businesses in Ahmedabad without website",
+            "small shops in Ahmedabad need web design",
+            "restaurants in Ahmedabad no online presence",
+            "retail stores Ahmedabad social media only",
+            "Ahmedabad local businesses poor website design",
+            "service providers Ahmedabad need website",
+            "Ahmedabad shops looking for web development",
+            "Ahmedabad businesses outdated website redesign",
         ]
 
     @property
     def qualification_system_prompt(self) -> str:
-        return """You are a lead qualification expert for a web development agency.
-Your job is to analyse page content and decide if this business needs a website or website redesign.
+        return """You are analyzing a business website or business listing from Ahmedabad, India.
+Decide if this business needs a website or website redesign.
 
-Signals of a GOOD lead (score high):
-- No website mentioned, only social media links
-- Outdated design (tables, Flash, copyrights from 2010-2018)
-- Broken links, missing images, placeholder content
-- Explicitly asking for web development help
-- Small/local business with poor online presence
+Score HIGH if:
+- Business has no website (only Google My Business, Facebook page)
+- Website is very outdated (old design, broken links)
+- No mobile responsive design
+- Website has missing contact info or broken forms
+- Business is in service/retail/F&B sector
 
 Return JSON with:
 {
   "score": <float 0.0-1.0>,
-  "pain_points": [<list of specific issues you noticed>],
+  "pain_points": [<specific issues>],
   "reasoning": "<one sentence>"
 }"""
 
     def qualification_user_prompt(self, content: str) -> str:
-        return f"""Analyse this page and score it as a website development lead.
+        return f"""Analyze this Ahmedabad business and score as website development lead.
 
-Page content:
+Content:
 {content[:5000]}
 
 Return ONLY valid JSON."""
