@@ -3,9 +3,11 @@ Lead Workflows
 
 Handles the end-to-end lifecycle of a lead after discovery:
 
-  1. LeadQualifier  – re-scores and filters leads using the LLM
-  2. OutreachComposer – generates personalised outreach messages
-  3. LeadWorkflow  – orchestrates discovery → qualify → compose → save
+  1. LeadQualifier    – re-scores and filters leads using the LLM
+  2. BusinessFilter   – evaluates online presence + business model suitability
+                        classifies as High Priority / Medium Priority / Discard
+  3. OutreachComposer – generates personalised outreach messages
+  4. LeadWorkflow     – orchestrates discovery → qualify → filter → compose → save
 
 Supported outreach channels:
   - Email draft (ready to paste into Gmail/SMTP)
@@ -31,6 +33,7 @@ from automation.jobs import (
     WhatsAppBotLeadJob,
     SEOLeadJob,
 )
+from filters.business_filter import BusinessFilter, FilterPriority
 
 logger = logging.getLogger(__name__)
 
@@ -252,8 +255,9 @@ class LeadWorkflow:
 
         llm = LLMClient(self.llm_config)
         self.qualifier = LeadQualifier(llm)
-        self.composer = OutreachComposer(llm)
-        self.runner = JobRunner(self.crawler_config, self.llm_config)
+        self.composer  = OutreachComposer(llm)
+        self.runner    = JobRunner(self.crawler_config, self.llm_config)
+        self.biz_filter = BusinessFilter(llm)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -296,6 +300,34 @@ class LeadWorkflow:
         logger.info("After qualification: %d leads", len(qualified))
         return qualified
 
+    async def step_filter(self, leads: List[Lead]) -> List[Lead]:
+        """
+        Step 3: Business filter — online presence + business model evaluation.
+
+        Each lead is scored on:
+          - Online presence quality  (0-10)
+          - Suitability for digital services (0-10)
+
+        Then classified as:
+          HIGH     → pursue immediately
+          MEDIUM   → worth reaching out
+          DISCARD  → wrong business type (food stalls, cash-only, etc.) — removed
+
+        Returns only HIGH and MEDIUM leads, sorted HIGH-first.
+        """
+        logger.info("[FILTER] Running business filter on %d leads…", len(leads))
+        filter_results = await self.biz_filter.evaluate_batch(leads, concurrency=4)
+        filtered = self.biz_filter.apply_to_leads(leads, filter_results)
+
+        high   = sum(1 for l in filtered if getattr(l, "filter_priority", "") == FilterPriority.HIGH)
+        medium = sum(1 for l in filtered if getattr(l, "filter_priority", "") == FilterPriority.MEDIUM)
+        removed = len(leads) - len(filtered)
+        logger.info(
+            "[FILTER] Done: %d high, %d medium, %d discarded",
+            high, medium, removed,
+        )
+        return filtered
+
     async def step_compose_outreach(
         self, leads: List[Lead]
     ) -> Dict[str, Dict[str, str]]:
@@ -325,35 +357,46 @@ class LeadWorkflow:
         # 1. Discover
         raw_leads = await self.step_discover(service)
 
-        # 2. Qualify
+        # 2. Qualify (score-based filter)
         qualified_leads = await self.step_qualify(raw_leads)
 
-        # 3. Compose outreach
-        outreach = await self.step_compose_outreach(qualified_leads)
+        # 3. Business filter (online presence + model suitability → HIGH/MEDIUM/DISCARD)
+        filtered_leads = await self.step_filter(qualified_leads)
 
-        # 4. Save
+        # 4. Compose outreach (only for HIGH + MEDIUM leads)
+        outreach = await self.step_compose_outreach(filtered_leads)
+
+        # 5. Save
         leads_file = self._save_json(
-            [l.to_dict() for l in qualified_leads],
+            [l.to_dict() for l in filtered_leads],
             f"leads_{ts}.json",
         )
         outreach_file = self._save_json(outreach, f"outreach_{ts}.json")
 
-        # 5. Build report
+        # 6. Build report
+        high_leads   = sum(1 for l in filtered_leads if getattr(l, "filter_priority", "") == FilterPriority.HIGH)
+        medium_leads = sum(1 for l in filtered_leads if getattr(l, "filter_priority", "") == FilterPriority.MEDIUM)
+        discarded    = len(qualified_leads) - len(filtered_leads)
+
         summary = {
-            "run_at": ts,
-            "service_filter": service or "all",
-            "raw_leads": len(raw_leads),
-            "qualified_leads": len(qualified_leads),
-            "hot_leads": sum(1 for l in qualified_leads if l.qualification_score >= LeadQualifier.SCORE_HOT),
-            "warm_leads": sum(1 for l in qualified_leads if LeadQualifier.SCORE_WARM <= l.qualification_score < LeadQualifier.SCORE_HOT),
-            "outreach_drafted": len(outreach),
+            "run_at":            ts,
+            "service_filter":    service or "all",
+            "raw_leads":         len(raw_leads),
+            "qualified_leads":   len(qualified_leads),
+            "filtered_leads":    len(filtered_leads),
+            "high_priority":     high_leads,
+            "medium_priority":   medium_leads,
+            "discarded":         discarded,
+            "hot_leads":         sum(1 for l in filtered_leads if l.qualification_score >= LeadQualifier.SCORE_HOT),
+            "warm_leads":        sum(1 for l in filtered_leads if LeadQualifier.SCORE_WARM <= l.qualification_score < LeadQualifier.SCORE_HOT),
+            "outreach_drafted":  len(outreach),
         }
 
         report = {
-            "summary": summary,
-            "leads": [l.to_dict() for l in qualified_leads],
-            "outreach": outreach,
-            "saved_files": [leads_file, outreach_file],
+            "summary":      summary,
+            "leads":        [l.to_dict() for l in filtered_leads],
+            "outreach":     outreach,
+            "saved_files":  [leads_file, outreach_file],
         }
 
         # Print summary to console

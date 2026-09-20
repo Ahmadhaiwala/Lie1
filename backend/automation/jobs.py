@@ -46,6 +46,15 @@ class Lead:
     outreach_sent: bool = False
     notes: str = ""
 
+    # ── Filter layer fields (populated by BusinessFilter) ──────────────
+    # Priority assigned after online-presence + business-model evaluation
+    filter_priority: str = "unfiltered"        # "high" | "medium" | "discard" | "unfiltered"
+    filter_justification: str = ""             # 1-sentence reason shown in UI card
+    filter_reasoning: str = ""                 # full paragraph shown on expand
+    filter_online_score: float = -1.0          # 0-10, -1 = not evaluated
+    filter_suitability_score: float = -1.0     # 0-10, -1 = not evaluated
+    filter_recommended: List[str] = field(default_factory=list)  # recommended services
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
