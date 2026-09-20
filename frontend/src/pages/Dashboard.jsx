@@ -5,7 +5,7 @@ import {
   Filter, RefreshCw, Download, CheckCircle,
   Clock, Mail, Phone, ExternalLink, Zap, ChevronDown,
   Star, AlertCircle, Wifi, WifiOff, Flame, ThumbsUp,
-  XCircle, BarChart2, Shield, Info,
+  XCircle, BarChart2, Shield, Info, Search,
 } from "lucide-react";
 import { mockLeads } from "../data/mockLeads";
 import { fetchLeads, fetchLeadStats, updateLead } from "../api/leads";
