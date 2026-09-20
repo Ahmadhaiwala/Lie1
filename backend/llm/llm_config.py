@@ -34,15 +34,28 @@ class LLMConfig:
     @classmethod
     def from_env(cls) -> 'LLMConfig':
         """Create config from environment variables"""
-        api_key = os.getenv('OPENROUTER_API_KEY')
-        if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        # Support both OpenRouter and Ollama
+        llm_provider = os.getenv('LLM_PROVIDER', 'openrouter').lower()
+        
+        if llm_provider == 'ollama':
+            # Use local Ollama instance
+            api_key = "ollama"  # Ollama doesn't need a real API key
+            base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434/v1')
+            model = os.getenv('DEFAULT_MODEL', 'llama3')
+        else:
+            # Use OpenRouter (default)
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if not api_key:
+                raise ValueError("OPENROUTER_API_KEY environment variable is required or set LLM_PROVIDER=ollama")
+            base_url = "https://openrouter.ai/api/v1"
+            model = os.getenv('DEFAULT_MODEL', 'meta-llama/llama-3.2-3b-instruct')
         
         return cls(
             api_key=api_key,
-            model=os.getenv('DEFAULT_MODEL', 'meta-llama/llama-3.2-3b-instruct'),
+            base_url=base_url,
+            model=model,
             temperature=float(os.getenv('LLM_TEMPERATURE', '0.7')),
-            max_tokens=int(os.getenv('LLM_MAX_TOKENS', '4096')),
+            max_tokens=int(os.getenv('LLM_MAX_TOKENS', '2048')),  # Reduced for local inference
         )
     
     def to_dict(self) -> dict:

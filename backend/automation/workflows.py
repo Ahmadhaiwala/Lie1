@@ -34,6 +34,7 @@ from automation.jobs import (
     SEOLeadJob,
 )
 from filters.business_filter import BusinessFilter, FilterPriority
+from discovery.business_discovery import BusinessDiscovery, SearchIntent, SearchQuery
 
 logger = logging.getLogger(__name__)
 
@@ -281,17 +282,99 @@ class LeadWorkflow:
     # ------------------------------------------------------------------
 
     async def step_discover(self, service: Optional[str] = None) -> List[Lead]:
-        """Step 1: Discover raw leads via web crawling."""
-        if service:
-            result = await self.runner.run_single(service)
-            job_results = [result]
+        """Step 1: Discover raw leads via SerpAPI (REAL Google search)."""
+        logger.info(f"Starting discovery with SerpAPI... (service={service})")
+        
+        from crawler.web_crawler import WebCrawler
+        from models.business import BusinessStatus
+        
+        discovery = BusinessDiscovery()
+        
+        # Parse service-specific queries
+        logger.info(f"[DEBUG] service type: {type(service)}, value: '{service}'")
+        if service == "website":
+            queries = [
+                ("website design agencies", "India"),
+                ("web development companies", "India"),
+                ("professional website builders", "India"),
+            ]
+        elif service == "whatsapp_bot":
+            queries = [
+                ("whatsapp business automation", "India"),
+                ("chatbot development services", "India"),
+                ("whatsapp api development", "India"),
+            ]
+        elif service == "seo":
+            queries = [
+                ("seo services", "India"),
+                ("search engine optimization agencies", "India"),
+                ("google ranking optimization", "India"),
+            ]
         else:
-            job_results = await self.runner.run_all(parallel=False)
-
-        all_leads: List[Lead] = []
-        for jr in job_results:
-            all_leads.extend(jr.leads)
-        logger.info("Discovery complete. Raw leads: %d", len(all_leads))
+            queries = [("general search", "India")]
+        
+        all_leads = []
+        
+        # Search using SerpAPI for REAL data
+        async with WebCrawler() as crawler:
+            for query, location in queries:
+                try:
+                    logger.info(f"Searching: {query} in {location}")
+                    
+                    # Get REAL Google search results
+                    real_results = await crawler.search_google(
+                        query=query,
+                        location=location,
+                        num_results=10
+                    )
+                    
+                    logger.info(f"Found {len(real_results)} results for '{query}'")
+                    
+                    # Convert to Lead objects
+                    for result in real_results:
+                        lead = Lead(
+                            name=result.get('name', 'Unknown'),
+                            email=result.get('email'),
+                            phone=result.get('phone'),
+                            website=result.get('website'),
+                            location=result.get('address') or location,
+                            services=result.get('description', query),
+                            score=result.get('score', 0.8),
+                            status="discovered",
+                            source=result.get('source', 'google_search'),
+                        )
+                        if lead.name and lead.name != 'Unknown':
+                            all_leads.append(lead)
+                            logger.info(f"✓ Found lead: {lead.name}")
+                
+                except Exception as e:
+                    logger.error(f"Search error for '{query}': {str(e)}")
+                    # Fall back to mock data if search fails
+                    mock_discovery = BusinessDiscovery()
+                    intent = SearchIntent(
+                        raw_input=query,
+                        industry=service or "General",
+                        location=location,
+                        keywords=[query],
+                        queries=[SearchQuery(query=query, search_type="combined", location=location)]
+                    )
+                    
+                    businesses = await mock_discovery.discover(intent)
+                    for biz in businesses:
+                        lead = Lead(
+                            name=biz.name,
+                            email=biz.contact.email if biz.contact else None,
+                            phone=biz.contact.phone if biz.contact else None,
+                            website=biz.contact.website if biz.contact else None,
+                            location=f"{biz.locations[0].city}, {biz.locations[0].state}" if biz.locations else location,
+                            services=biz.description,
+                            score=0.7,
+                            status="discovered",
+                            source="mock_fallback",
+                        )
+                        all_leads.append(lead)
+        
+        logger.info(f"Discovery complete. Raw leads: {len(all_leads)}")
         return all_leads
 
     async def step_qualify(self, leads: List[Lead]) -> List[Lead]:

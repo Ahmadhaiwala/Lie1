@@ -10,6 +10,10 @@ Or with the helper script:
 """
 import os
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Ensure the backend/ directory is on the path so all local imports resolve
 sys.path.insert(0, os.path.dirname(__file__))

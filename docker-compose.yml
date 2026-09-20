@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Ollama service (Local LLM)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: leadbot-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # LeadBot Backend (FastAPI + Crawl4AI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leadbot-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434/v1
+      - DEFAULT_MODEL=llama3
+      - LLM_TEMPERATURE=0.7
+      - LLM_MAX_TOKENS=2048
+      - AGENCY_NAME=LeadBot AI
+      - AGENCY_WEBSITE=https://leadbot.ai
+      - SENDER_NAME=LeadBot Team
+      - SENDER_WHATSAPP=+92-300-0000000
+      - LOG_DIR=logs
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:3000
+      - CRAWL4AI_VERBOSE=True
+      - CRAWL4AI_MAX_CONCURRENT=5
+      - BROWSER_HEADLESS=True
+      - BROWSER_TIMEOUT=30000
+    volumes:
+      - ./backend:/app
+      - ./backend/leads_output:/app/leads_output
+      - ./backend/logs:/app/logs
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend (React + Vite)
+  frontend:
+    image: node:18-alpine
+    container_name: leadbot-frontend
+    working_dir: /app
+    ports:
+      - "5174:5174"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  default:
+    name: leadbot-network
+    driver: bridge

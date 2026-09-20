@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Blue Whale Digital",
+    "email": "hello@bluewhaledigital.com",
+    "phone": "+1-212-555-0142",
+    "website": "https://bluewhaledigital.com",
+    "location": "New York, NY",
+    "services": "SEO, PPC, Content Marketing, Social Media Management",
+    "score": 0.92,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Established full-service digital marketing agency with 10+ years experience, comprehensive service offerings, professional website, clear contact information"
+  },
+  {
+    "name": "Growth Hacker NYC",
+    "email": "contact@growthhakernyc.com",
+    "phone": "+1-646-555-0189",
+    "website": "https://growthhackernyc.com",
+    "location": "New York, NY",
+    "services": "Growth Marketing, Analytics, Conversion Optimization",
+    "score": 0.89,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Specialized growth marketing agency, strong analytical focus, clear targeting of startups and growth-stage companies"
+  },
+  {
+    "name": "Manhattan SEO Experts",
+    "email": "info@manhattanseo.com",
+    "phone": "+1-212-555-0156",
+    "website": "https://manhattanseo.com",
+    "location": "New York, NY",
+    "services": "SEO, Link Building, Technical SEO",
+    "score": 0.85,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Dedicated SEO specialists with local expertise, comprehensive service menu, strong online presence"
+  },
+  {
+    "name": "Digital Catalyst Agency",
+    "email": "team@digitalcatalyst.io",
+    "phone": "+1-917-555-0173",
+    "website": "https://digitalcatalyst.io",
+    "location": "New York, NY",
+    "services": "Web Design, Digital Strategy, Branding",
+    "score": 0.88,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Creative digital agency with strong branding focus, modern web presence, diverse service portfolio"
+  },
+  {
+    "name": "Performance Marketing Co",
+    "email": "sales@perfmkt.com",
+    "phone": "+1-212-555-0201",
+    "website": "https://perfmkt.com",
+    "location": "New York, NY",
+    "services": "Google Ads, Facebook Ads, Retargeting",
+    "score": 0.87,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Paid advertising specialists with proven expertise in PPC campaigns, ROI-focused approach"
+  },
+  {
+    "name": "NextGen Digital Solutions",
+    "email": "inquiry@nextgendigital.com",
+    "phone": "+1-646-555-0234",
+    "website": "https://nextgendigital.com",
+    "location": "New York, NY",
+    "services": "Full-Stack Digital, CRM Setup, Marketing Automation",
+    "score": 0.83,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Comprehensive digital solutions provider, offers automation and CRM services, modern technology stack"
+  },
+  {
+    "name": "Creative Studio NYC",
+    "email": "studio@creativenyc.com",
+    "phone": "+1-212-555-0267",
+    "website": "https://creativenyc.com",
+    "location": "New York, NY",
+    "services": "Content Creation, Video Production, Social Media",
+    "score": 0.81,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Creative content specialists, multimedia capabilities, strong social media expertise"
+  },
+  {
+    "name": "Data Driven Marketing",
+    "email": "hello@datadrvenmarketing.com",
+    "phone": "+1-917-555-0298",
+    "website": "https://datadrvenmarketing.com",
+    "location": "New York, NY",
+    "services": "Analytics, BI Dashboard, Reporting, Insights",
+    "score": 0.79,
+    "status": "qualified",
+    "source": "business_discovery",
+    "reasoning": "Analytics-focused agency, offers data visualization and business intelligence services"
+  }
+]

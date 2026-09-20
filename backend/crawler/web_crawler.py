@@ -1,24 +1,45 @@
 """
-Web Crawler using Crawl4AI
+Web Crawler - Uses SerpAPI for REAL Google search results
+Falls back to Crawl4AI if available, then mock crawler
 """
 import asyncio
+import logging
 from typing import Optional, Dict, Any, List
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
+import os
+
+logger = logging.getLogger(__name__)
+
+# Try to import SerpAPI first (for REAL data)
+try:
+    import aiohttp
+    SERPAPI_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"SerpAPI not available: {e}")
+    SERPAPI_AVAILABLE = False
+
+# Try to import Crawl4AI
+try:
+    from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
+    CRAWL4AI_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Crawl4AI not available: {e}")
+    CRAWL4AI_AVAILABLE = False
+
 from crawler.config import CrawlerConfig
+from crawler.mock_crawler import MockWebCrawler
 
 
 class WebCrawler:
-    """Web crawler wrapper for Crawl4AI"""
+    """Web crawler - tries SerpAPI first, then Crawl4AI, then mock"""
     
     def __init__(self, config: Optional[CrawlerConfig] = None):
-        """
-        Initialize the web crawler
-        
-        Args:
-            config: CrawlerConfig instance with crawler settings
-        """
+        """Initialize the web crawler"""
         self.config = config or CrawlerConfig()
-        self._crawler: Optional[AsyncWebCrawler] = None
+        self._crawler: Optional[Any] = None
+        self.crawler_type = None
+        
+        # Get API keys from environment
+        self.serpapi_key = os.getenv('SERP_API_KEY')
         
     async def __aenter__(self):
         """Async context manager entry"""
@@ -30,32 +51,126 @@ class WebCrawler:
         await self.close()
         
     async def start(self):
-        """Initialize and start the crawler"""
-        browser_config_kwargs = {
-            'headless': self.config.headless,
-            'browser_type': self.config.browser_type,
-            'viewport_width': self.config.viewport_width,
-            'viewport_height': self.config.viewport_height,
-            'use_managed_browser': not self.config.use_stealth_mode,
-        }
-        
-        # Only add optional parameters if they are not None
-        if self.config.user_agent:
-            browser_config_kwargs['user_agent'] = self.config.user_agent
-        
-        if self.config.extra_headers:
-            browser_config_kwargs['headers'] = self.config.extra_headers
-        
-        browser_config = BrowserConfig(**browser_config_kwargs)
-        
-        self._crawler = AsyncWebCrawler(config=browser_config)
-        await self._crawler.__aenter__()
+        """Initialize crawler - prioritizes SerpAPI for real data"""
+        if SERPAPI_AVAILABLE and self.serpapi_key:
+            logger.info("✓ Using SerpAPI for REAL Google search results")
+            self.crawler_type = "serpapi"
+            self._crawler = "serpapi"  # SerpAPI uses async HTTP, not a crawler object
+        elif CRAWL4AI_AVAILABLE:
+            logger.info("Using Crawl4AI web crawler")
+            self.crawler_type = "crawl4ai"
+            try:
+                browser_config = BrowserConfig(
+                    headless=self.config.headless,
+                    browser_type=self.config.browser_type,
+                )
+                self._crawler = AsyncWebCrawler(config=browser_config)
+                await self._crawler.__aenter__()
+            except Exception as e:
+                logger.warning(f"Crawl4AI failed: {e}. Using mock crawler.")
+                self.crawler_type = "mock"
+                self._crawler = MockWebCrawler(self.config)
+                await self._crawler.start()
+        else:
+            logger.info("Using mock crawler")
+            self.crawler_type = "mock"
+            self._crawler = MockWebCrawler(self.config)
+            await self._crawler.start()
         
     async def close(self):
-        """Close the crawler and cleanup resources"""
-        if self._crawler:
-            await self._crawler.__aexit__(None, None, None)
-            self._crawler = None
+        """Close the crawler"""
+        if self._crawler and self.crawler_type == "crawl4ai":
+            try:
+                await self._crawler.__aexit__(None, None, None)
+            except:
+                pass
+        elif self._crawler and self.crawler_type == "mock":
+            await self._crawler.close()
+        self._crawler = None
+    
+    async def search_google(
+        self,
+        query: str,
+        location: Optional[str] = None,
+        num_results: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search Google using SerpAPI for REAL results
+        
+        Args:
+            query: Search query (e.g., "cloth shops")
+            location: Location (e.g., "Ahmedabad, India")
+            num_results: Number of results
+            
+        Returns:
+            List of real search results with business info
+        """
+        if self.crawler_type != "serpapi":
+            logger.warning("SerpAPI not available, cannot search real data")
+            return []
+        
+        try:
+            import aiohttp
+            
+            params = {
+                "api_key": self.serpapi_key,
+                "q": f"{query} in {location}" if location else query,
+                "engine": "google",
+                "num": num_results,
+                "gl": "in",  # India
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    "https://serpapi.com/search",
+                    params=params,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        logger.info(f"✓ Real Google search: {query}")
+                        return self._parse_search_results(data)
+                    else:
+                        logger.error(f"SerpAPI error: {response.status}")
+                        return []
+        except Exception as e:
+            logger.error(f"Google search failed: {str(e)}")
+            return []
+    
+    def _parse_search_results(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Parse SerpAPI results into business objects"""
+        businesses = []
+        
+        # Parse organic results
+        if "organic_results" in data:
+            for result in data.get("organic_results", [])[:10]:
+                business = {
+                    "name": result.get("title", "Unknown"),
+                    "website": result.get("link", ""),
+                    "description": result.get("snippet", ""),
+                    "source": "google_search",
+                    "score": 0.8
+                }
+                if business["website"]:
+                    businesses.append(business)
+        
+        # Parse local/knowledge panel results
+        if "knowledge_graph" in data:
+            kg = data["knowledge_graph"]
+            business = {
+                "name": kg.get("title", "Unknown"),
+                "website": kg.get("website", ""),
+                "phone": kg.get("phone", ""),
+                "address": kg.get("address", ""),
+                "description": kg.get("description", ""),
+                "source": "knowledge_graph",
+                "score": 0.9
+            }
+            if business["name"]:
+                businesses.append(business)
+        
+        logger.info(f"Parsed {len(businesses)} real businesses")
+        return businesses
             
     async def crawl(
         self,
