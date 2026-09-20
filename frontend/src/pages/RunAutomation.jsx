@@ -140,7 +140,12 @@ export default function RunAutomation() {
         setStatus("failed"); setJobError(final.error || "Job failed");
         setLogLines(p => [...p, `[ERROR] ${final.error}`]);
       }
-    } catch (e) { setStatus("failed"); setJobError(e.message); }
+    } catch (e) {
+      const message = e.message || "Job status could not be retrieved";
+      setStatus("failed");
+      setJobError(message);
+      setLogLines(p => [...p, `[ERROR] ${message}`]);
+    }
   };
 
   const startDemo = async () => {

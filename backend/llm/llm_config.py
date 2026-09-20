@@ -4,9 +4,11 @@ LLM Configuration
 from dataclasses import dataclass
 from typing import Optional
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Always load .env from the backend/ root, regardless of working directory
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 @dataclass

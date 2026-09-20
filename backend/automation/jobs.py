@@ -21,6 +21,7 @@ from crawler.web_crawler import WebCrawler
 from crawler.config import CrawlerConfig
 from llm.llm_client import LLMClient
 from llm.llm_config import LLMConfig
+from automation.search_provider import SearchProvider
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class BaseLeadJob:
         )
         self.llm_config = llm_config or LLMConfig.from_env()
         self.llm = LLMClient(self.llm_config)
+        self.search_provider = SearchProvider()
 
     # ------------------------------------------------------------------
     # Subclass contracts
@@ -221,6 +223,43 @@ Return ONLY valid JSON, no extra text."""
         )
         return lead
 
+    async def _run_with_search_api(self, started_at: str) -> JobResult:
+        """Discover and qualify leads from API results without starting Playwright."""
+        leads: List[Lead] = []
+        errors: List[str] = []
+        logger.info("[%s] Using %s for discovery; Playwright is not started.", self.JOB_NAME, self.search_provider.name)
+
+        for query in self.search_queries:
+            try:
+                results = await self.search_provider.search(query, self.RESULTS_PER_QUERY)
+                logger.info("[%s] Query '%s' returned %d API results", self.JOB_NAME, query, len(results))
+                for item in results:
+                    url = item["url"]
+                    try:
+                        lead = await self._qualify_lead(item.get("content", "")[:6000], url)
+                        if lead:
+                            leads.append(lead)
+                            logger.info("[%s] Lead found: %s (score=%.2f)", self.JOB_NAME, lead.business_name, lead.qualification_score)
+                    except Exception as exc:
+                        err = f"API result qualification error [{url}]: {exc}"
+                        logger.error(err)
+                        errors.append(err)
+            except Exception as exc:
+                err = f"API search error [{query}]: {exc}"
+                logger.error(err)
+                errors.append(err)
+
+        result = JobResult(
+            job_name=self.JOB_NAME,
+            started_at=started_at,
+            finished_at=datetime.utcnow().isoformat(),
+            leads_found=len(leads),
+            leads=leads,
+            errors=errors,
+        )
+        logger.info("[%s] Done - %d leads found, %d errors", self.JOB_NAME, len(leads), len(errors))
+        return result
+
     async def run(self) -> JobResult:
         """Execute the job end-to-end and return a JobResult."""
         started_at = datetime.utcnow().isoformat()
@@ -228,6 +267,14 @@ Return ONLY valid JSON, no extra text."""
         errors: List[str] = []
 
         logger.info("[%s] Starting job with %d queries", self.JOB_NAME, len(self.search_queries))
+
+        if self.search_provider.configured:
+            return await self._run_with_search_api(started_at)
+
+        logger.warning(
+            "[%s] SERPAPI_API_KEY and GOOGLE_MAPS_API_KEY are not configured; falling back to browser crawling.",
+            self.JOB_NAME,
+        )
 
         async with WebCrawler(self.crawler_config) as crawler:
             for query in self.search_queries:
