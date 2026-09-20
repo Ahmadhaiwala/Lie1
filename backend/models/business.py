@@ -25,6 +25,7 @@ class BusinessLocation(BaseModel):
     postal_code: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    distance_km: Optional[float] = None  # Distance from search center
     is_primary: bool = True
 
 

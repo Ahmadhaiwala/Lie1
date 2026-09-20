@@ -6,7 +6,7 @@ import { apiGet, apiPost } from "./client";
 
 /**
  * Trigger a new lead generation run.
- * @param {{ service?: string, services?: string[], min_score?: number }} body
+ * @param {{ service?: string, services?: string[], min_score?: number, keywords?: string[] }} body
  * @returns {{ data: { job_id, status, message }, error: string|null }}
  */
 export async function runJob(body = {}) {
@@ -14,6 +14,7 @@ export async function runJob(body = {}) {
     service:   body.service   || null,
     services:  body.services  || null,
     min_score: body.min_score ?? 0.5,
+    keywords:  body.keywords  || [],
   });
 }
 

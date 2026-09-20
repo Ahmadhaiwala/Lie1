@@ -247,11 +247,13 @@ class LeadWorkflow:
         llm_config: Optional[LLMConfig] = None,
         min_score: float = 0.5,
         output_dir: str = "leads_output",
+        search_queries: Optional[List[str]] = None,
     ):
         self.llm_config = llm_config or LLMConfig.from_env()
         self.crawler_config = crawler_config or CrawlerConfig(headless=True, page_timeout=20000)
         self.min_score = min_score
         self.output_dir = output_dir
+        self.search_queries = search_queries or []
 
         llm = LLMClient(self.llm_config)
         self.qualifier = LeadQualifier(llm)
@@ -283,10 +285,12 @@ class LeadWorkflow:
     async def step_discover(self, service: Optional[str] = None) -> List[Lead]:
         """Step 1: Discover raw leads via web crawling."""
         if service:
-            result = await self.runner.run_single(service)
+            result = await self.runner.run_single(service, self.search_queries)
             job_results = [result]
         else:
-            job_results = await self.runner.run_all(parallel=False)
+            job_results = await self.runner.run_all(
+                parallel=False, custom_queries=self.search_queries
+            )
 
         all_leads: List[Lead] = []
         for jr in job_results:

@@ -30,6 +30,7 @@ class RunRequest(BaseModel):
     service:   Optional[str] = Field(None, description="website | whatsapp_bot | seo | null = all")
     min_score: float          = Field(0.5,  ge=0.0, le=1.0)
     services:  Optional[List[str]] = Field(None, description="run multiple services")
+    keywords:  List[str] = Field(default_factory=list, max_length=10, description="Optional custom business-search terms")
 
 
 class ScheduleRequest(BaseModel):
@@ -45,7 +46,9 @@ class ScheduleRequest(BaseModel):
 
 # ── Background task ───────────────────────────────────────────────────────────
 
-async def _run_job_background(job_id: str, service: Optional[str], min_score: float):
+async def _run_job_background(
+    job_id: str, service: Optional[str], min_score: float, keywords: List[str]
+):
     """Runs in background; updates the JobRecord throughout."""
     from automation.workflows import LeadWorkflow
     from crawler.config import CrawlerConfig
@@ -87,6 +90,7 @@ async def _run_job_background(job_id: str, service: Optional[str], min_score: fl
             llm_config=LLMConfig.from_env(),
             min_score=min_score,
             output_dir="leads_output",
+            search_queries=keywords,
         )
 
         report = await workflow.run(service=service)
@@ -127,9 +131,15 @@ async def run_jobs(body: RunRequest, background_tasks: BackgroundTasks):
     elif not service and body.services and len(body.services) > 1:
         service = None   # run all; individual service filtering not supported in one call
 
+    keywords = list(dict.fromkeys(
+        keyword.strip() for keyword in body.keywords if keyword.strip()
+    ))
+    if any(len(keyword) > 160 for keyword in keywords):
+        raise HTTPException(422, "Each keyword must be 160 characters or fewer")
+
     job = create_job(service, body.min_score)
     background_tasks.add_task(
-        _run_job_background, job.job_id, service, body.min_score
+        _run_job_background, job.job_id, service, body.min_score, keywords
     )
     return {
         "job_id":  job.job_id,
