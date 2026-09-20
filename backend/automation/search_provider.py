@@ -38,12 +38,14 @@ class SearchProvider:
         raise RuntimeError("No API-backed search provider is configured")
 
     async def _search_google_places_with_details(self, query: str, limit: int) -> List[Dict[str, str]]:
-        """Search Google Places and fetch detailed contact info for each result"""
-        # First, search for places
+        """Search Google Places in Ahmedabad and fetch detailed contact info for each result"""
+        # Add Ahmedabad location to query
+        query_with_location = f"{query} in Ahmedabad"
+        
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": self.google_maps_key,
-            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber,places.googleMapsUri,places.rating,places.businessStatus",
+            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber,places.googleMapsUri,places.rating,places.businessStatus,places.types",
         }
         
         timeout = aiohttp.ClientTimeout(total=30)
@@ -51,7 +53,7 @@ class SearchProvider:
             async with session.post(
                 self.GOOGLE_PLACES_URL,
                 headers=headers,
-                json={"textQuery": query, "pageSize": limit}
+                json={"textQuery": query_with_location, "pageSize": limit}
             ) as response:
                 data = await response.json(content_type=None)
                 if response.status >= 400:
@@ -68,13 +70,15 @@ class SearchProvider:
             maps_url = place.get("googleMapsUri", "")
             rating = place.get("rating", 0)
             status = place.get("businessStatus", "")
+            place_types = place.get("types", [])
             
             # Get detailed information if we have place_id
             email = ""
             if place_id and not phone:
                 email = await self._get_place_email(place_id, session)
             
-            if phone or email or website:
+            # Only include Ahmedabad businesses that are operational
+            if "Ahmedabad" in address and status == "OPERATIONAL":
                 result = {
                     "name": name,
                     "phone": phone,
@@ -84,7 +88,8 @@ class SearchProvider:
                     "rating": str(rating) if rating else "N/A",
                     "status": status,
                     "type": "google_places",
-                    "content": f"{name}\n{address}\nPhone: {phone}\nWebsite: {website}\nRating: {rating}"
+                    "types": ",".join(place_types[:3]),
+                    "content": f"{name}\n{address}\nPhone: {phone}\nWebsite: {website}\nRating: {rating}\nTypes: {','.join(place_types[:3])}"
                 }
                 results.append(result)
         

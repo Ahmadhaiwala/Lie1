@@ -242,9 +242,9 @@ Return ONLY valid JSON, no extra text."""
                     address = item.get("address", "")
                     rating = item.get("rating", "N/A")
                     
-                    # Skip if no contact info
-                    if not (phone or email):
-                        logger.debug("[%s] Skipping %s - no phone or email", self.JOB_NAME, business_name)
+                    # Skip only if business name is Unknown (means API returned nothing useful)
+                    if business_name == "Unknown":
+                        logger.debug("[%s] Skipping - no business name", self.JOB_NAME)
                         continue
                     
                     try:
@@ -260,11 +260,12 @@ Return ONLY valid JSON, no extra text."""
                             
                             leads.append(lead)
                             logger.info(
-                                "[%s] Lead found: %s | Phone: %s | Email: %s (score=%.2f)", 
+                                "[%s] Lead found: %s | Phone: %s | Email: %s | Website: %s (score=%.2f)", 
                                 self.JOB_NAME, 
                                 business_name, 
                                 phone or "N/A",
                                 email or "N/A",
+                                url or "N/A",
                                 lead.qualification_score
                             )
                     except Exception as exc:
@@ -349,12 +350,12 @@ Return ONLY valid JSON, no extra text."""
 
 class WebsiteLeadJob(BaseLeadJob):
     """
-    Finds businesses that:
+    Finds businesses in Ahmedabad that:
     - Have no website at all (social-media-only presence)
     - Have an outdated/broken website (last decade design, no mobile support)
     - Are actively asking for help getting a website
 
-    Targets small businesses, local shops, freelancers, restaurants, etc.
+    Targets small businesses, local shops, freelancers, restaurants, etc. in Ahmedabad
     """
 
     JOB_NAME = "website_lead_job"
@@ -363,39 +364,39 @@ class WebsiteLeadJob(BaseLeadJob):
     @property
     def search_queries(self) -> List[str]:
         return [
-            "small business no website need web design",
-            "local restaurant no website contact us facebook",
-            "startup needs website development affordable",
-            "business owner looking for website developer freelance",
-            "ecommerce store setup help needed no website yet",
-            "we don't have a website yet contact us",
-            "our website is outdated need redesign",
-            "need a professional website for my business",
+            "businesses in Ahmedabad without website",
+            "small shops in Ahmedabad need web design",
+            "restaurants in Ahmedabad no online presence",
+            "retail stores Ahmedabad social media only",
+            "Ahmedabad local businesses poor website design",
+            "service providers Ahmedabad need website",
+            "Ahmedabad shops looking for web development",
+            "Ahmedabad businesses outdated website redesign",
         ]
 
     @property
     def qualification_system_prompt(self) -> str:
-        return """You are a lead qualification expert for a web development agency.
-Your job is to analyse page content and decide if this business needs a website or website redesign.
+        return """You are analyzing a business website or business listing from Ahmedabad, India.
+Decide if this business needs a website or website redesign.
 
-Signals of a GOOD lead (score high):
-- No website mentioned, only social media links
-- Outdated design (tables, Flash, copyrights from 2010-2018)
-- Broken links, missing images, placeholder content
-- Explicitly asking for web development help
-- Small/local business with poor online presence
+Score HIGH if:
+- Business has no website (only Google My Business, Facebook page)
+- Website is very outdated (old design, broken links)
+- No mobile responsive design
+- Website has missing contact info or broken forms
+- Business is in service/retail/F&B sector
 
 Return JSON with:
 {
   "score": <float 0.0-1.0>,
-  "pain_points": [<list of specific issues you noticed>],
+  "pain_points": [<specific issues>],
   "reasoning": "<one sentence>"
 }"""
 
     def qualification_user_prompt(self, content: str) -> str:
-        return f"""Analyse this page and score it as a website development lead.
+        return f"""Analyze this Ahmedabad business and score as website development lead.
 
-Page content:
+Content:
 {content[:5000]}
 
 Return ONLY valid JSON."""
