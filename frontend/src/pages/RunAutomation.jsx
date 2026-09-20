@@ -226,15 +226,15 @@ export default function RunAutomation() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/6">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Min Score</p>
+              className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/30">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs text-zinc-300 uppercase tracking-wider font-semibold">Min Score</p>
                 <span className="font-bold text-orange-400 text-sm">{Math.round(minScore * 100)}%</span>
               </div>
               <input type="range" min={0.3} max={0.9} step={0.05} value={minScore}
                 onChange={e => setMinScore(parseFloat(e.target.value))}
-                className="w-full accent-orange-500 cursor-pointer" />
-              <div className="flex justify-between text-xs text-zinc-700 mt-1">
+                className="w-full accent-orange-500 cursor-pointer h-2 rounded-lg appearance-none bg-gradient-to-r from-zinc-700 to-zinc-600" />
+              <div className="flex justify-between text-xs text-zinc-600 mt-2">
                 <span>30% (more leads)</span><span>90% (top only)</span>
               </div>
             </motion.div>
