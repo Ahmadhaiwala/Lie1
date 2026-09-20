@@ -4,42 +4,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50:  "#f0f4ff",
-          100: "#e0e9ff",
-          200: "#c7d6fe",
-          300: "#a5b8fc",
-          400: "#818cf8",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          800: "#3730a3",
-          900: "#312e81",
+        // Primary accent — orange
+        orange: {
+          50:  "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316",   // main orange
+          600: "#ea580c",
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
         },
-        neon: "#00f5d4",
+        // Dark backgrounds
         dark: {
-          900: "#060612",
-          800: "#0d0d1f",
-          700: "#12122b",
-          600: "#1a1a3e",
+          950: "#0a0a0a",   // pure near-black
+          900: "#111111",   // page bg
+          800: "#1a1a1a",   // card bg
+          700: "#222222",   // input bg
+          600: "#2a2a2a",   // border
+          500: "#333333",   // subtle divider
         },
+        // Keep neon as orange-glow alias
+        neon: "#f97316",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans:    ["Inter", "system-ui", "sans-serif"],
         display: ["'Space Grotesk'", "sans-serif"],
       },
       animation: {
-        "float":        "float 6s ease-in-out infinite",
-        "float-slow":   "float 9s ease-in-out infinite",
-        "pulse-neon":   "pulseNeon 2s ease-in-out infinite",
-        "gradient-x":   "gradientX 4s ease infinite",
-        "slide-up":     "slideUp 0.6s ease forwards",
-        "fade-in":      "fadeIn 0.8s ease forwards",
-        "spin-slow":    "spin 12s linear infinite",
-        "glow":         "glow 2s ease-in-out infinite alternate",
-        "shimmer":      "shimmer 2.5s linear infinite",
-        "typewriter":   "typewriter 3s steps(40) forwards",
-        "blink":        "blink 1s step-end infinite",
+        "float":       "float 6s ease-in-out infinite",
+        "float-slow":  "float 9s ease-in-out infinite",
+        "pulse-neon":  "pulseNeon 2s ease-in-out infinite",
+        "gradient-x":  "gradientX 4s ease infinite",
+        "slide-up":    "slideUp 0.6s ease forwards",
+        "fade-in":     "fadeIn 0.8s ease forwards",
+        "spin-slow":   "spin 12s linear infinite",
+        "glow":        "glow 2s ease-in-out infinite alternate",
+        "shimmer":     "shimmer 2.5s linear infinite",
+        "blink":       "blink 1s step-end infinite",
       },
       keyframes: {
         float: {
@@ -47,8 +51,8 @@ export default {
           "50%":      { transform: "translateY(-20px)" },
         },
         pulseNeon: {
-          "0%, 100%": { boxShadow: "0 0 20px #00f5d4, 0 0 40px #00f5d440" },
-          "50%":      { boxShadow: "0 0 40px #00f5d4, 0 0 80px #00f5d480" },
+          "0%, 100%": { boxShadow: "0 0 20px #f97316, 0 0 40px #f9731640" },
+          "50%":      { boxShadow: "0 0 40px #f97316, 0 0 80px #f9731680" },
         },
         gradientX: {
           "0%, 100%": { backgroundPosition: "0% 50%" },
@@ -63,27 +67,23 @@ export default {
           to:   { opacity: 1 },
         },
         glow: {
-          from: { textShadow: "0 0 10px #6366f1, 0 0 20px #6366f180" },
-          to:   { textShadow: "0 0 20px #6366f1, 0 0 40px #6366f1, 0 0 60px #6366f180" },
+          from: { textShadow: "0 0 10px #f97316, 0 0 20px #f9731680" },
+          to:   { textShadow: "0 0 20px #f97316, 0 0 40px #f97316, 0 0 60px #f9731680" },
         },
         shimmer: {
           "0%":   { backgroundPosition: "-1000px 0" },
           "100%": { backgroundPosition: "1000px 0" },
         },
-        typewriter: {
-          from: { width: "0" },
-          to:   { width: "100%" },
-        },
         blink: {
           "0%, 100%": { borderColor: "transparent" },
-          "50%":      { borderColor: "#00f5d4" },
+          "50%":      { borderColor: "#f97316" },
         },
       },
       backgroundImage: {
         "grid-dark":
-          "linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px)",
+          "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
         "radial-glow":
-          "radial-gradient(ellipse at center, rgba(99,102,241,0.15) 0%, transparent 70%)",
+          "radial-gradient(ellipse at center, rgba(249,115,22,0.08) 0%, transparent 70%)",
       },
       backgroundSize: {
         "grid": "60px 60px",

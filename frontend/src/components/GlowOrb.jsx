@@ -1,12 +1,12 @@
-export default function GlowOrb({ className = "", color = "brand" }) {
+export default function GlowOrb({ className = "", color = "orange" }) {
   const colors = {
-    brand: "bg-brand-500/20",
-    neon:  "bg-neon/10",
-    purple:"bg-purple-500/20",
+    orange: "bg-orange-500/15",
+    white:  "bg-white/5",
+    dark:   "bg-white/3",
   };
   return (
     <div
-      className={`absolute rounded-full blur-3xl pointer-events-none ${colors[color]} ${className}`}
+      className={`absolute rounded-full blur-3xl pointer-events-none ${colors[color] || colors.orange} ${className}`}
       aria-hidden="true"
     />
   );
