@@ -190,7 +190,6 @@ class SearchProvider:
         
         return results
 
-<<<<<<< HEAD
     async def _search_google_places(self, query: str, limit: int) -> List[Dict[str, str]]:
         # Get configured location
         location_name = get_default_location_name()
@@ -230,11 +229,19 @@ class SearchProvider:
 
         results: List[Dict[str, str]] = []
         for place in data.get("places", [])[:limit]:
-            website = place.get("websiteUri", "")
-            url = place.get("googleMapsUri") or website
-            if not url:
-                continue
             name = place.get("displayName", {}).get("text", "")
+            
+            # Skip if no business name
+            if not name:
+                logger.warning("Skipping Google Places result with no business name")
+                continue
+            
+            # Website is OPTIONAL - missing website should NOT discard the lead
+            website = place.get("websiteUri", "")
+            google_maps_url = place.get("googleMapsUri", "")
+            
+            # Use Google Maps URL as fallback for source_url
+            url = website or google_maps_url or ""
             
             # Extract coordinates
             location_data = place.get("location", {})
@@ -256,19 +263,52 @@ class SearchProvider:
             if distance_km is not None:
                 location_info += f" [Distance: {distance_km:.1f}km from center]"
             
-            content = "\n".join(str(value) for value in (name, address, place.get("nationalPhoneNumber", ""), ", ".join(place.get("types", [])), f"Rating: {place['rating']}" if place.get("rating") else "", f"Distance: {distance_km:.1f}km" if distance_km else "") if value)
-            results.append({
-                "url": url,
-                "website": website,
+            # Get phone number
+            phone = place.get("nationalPhoneNumber", "")
+            
+            # Get rating info
+            rating = place.get("rating")
+            
+            # Build content string for qualification
+            content_parts = [
+                name,
+                address,
+                phone,
+                ", ".join(place.get("types", [])),
+            ]
+            if rating:
+                content_parts.append(f"Rating: {rating}")
+            if distance_km:
+                content_parts.append(f"Distance: {distance_km:.1f}km")
+            
+            content = "\n".join(str(value) for value in content_parts if value)
+            
+            # Build result dict - url/website can be empty
+            result = {
+                "url": url,  # May be empty string
+                "website": website,  # May be empty string
+                "google_maps_url": google_maps_url,
                 "business_name": name,
                 "location": location_info,
+                "address": address,
                 "industry": ", ".join(place.get("types", [])),
-                "phone": place.get("nationalPhoneNumber", ""),
+                "phone": phone,
+                "rating": rating,
                 "content": content,
                 "latitude": lat,
                 "longitude": lng,
                 "distance_km": distance_km,
-            })
+            }
+            
+            results.append(result)
+            
+            logger.debug(
+                "Google Places result: %s | Website: %s | Phone: %s | Distance: %.1fkm",
+                name,
+                website or "None",
+                phone or "None",
+                distance_km if distance_km else 0,
+            )
         
         # Sort by distance (nearest first)
         if any(r.get("distance_km") is not None for r in results):
@@ -295,5 +335,3 @@ class SearchProvider:
         text = re.sub(r"<(script|style|noscript)[^>]*>.*?</\\1>", " ", text, flags=re.IGNORECASE | re.DOTALL)
         text = re.sub(r"<[^>]+>", " ", text)
         return re.sub(r"\\s+", " ", unescape(text)).strip()[:12_000]
-=======
->>>>>>> bee865b1c38482700b7eadb39e940580c6cd2cdc

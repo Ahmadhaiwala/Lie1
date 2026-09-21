@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play, Globe, MessageSquare, TrendingUp,
-  Zap, Clock, CheckCircle, Terminal, X,
+  Zap, Clock, CheckCircle, Terminal,
   Settings, RefreshCw, ChevronRight, Wifi, WifiOff,
 } from "lucide-react";
 import { runJob, pollJobUntilDone, scheduleJob } from "../api/jobs";
@@ -66,8 +66,33 @@ function JobCard({ job, selected, onToggle }) {
 }
 
 function LogTerminal({ lines, running }) {
+  const containerRef = useRef(null);
   const bottomRef = useRef(null);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [lines]);
+  const shouldAutoScrollRef = useRef(true);
+
+  // Auto-scroll only if user is at the bottom
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+    
+    const container = containerRef.current;
+    if (container) {
+      // Use setTimeout to ensure scroll happens after render
+      const timer = setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [lines]);
+
+  // Track if user is scrolling
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    // Check if user is near the bottom (within 50px)
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    shouldAutoScrollRef.current = isNearBottom;
+  };
 
   const color = (line) => {
     if (line.includes("[SUCCESS]") || line.includes("✓")) return "text-orange-400";
@@ -77,7 +102,11 @@ function LogTerminal({ lines, running }) {
   };
 
   return (
-    <div className="bg-black rounded-xl border border-white/6 p-4 font-mono text-xs h-64 overflow-y-auto">
+    <div 
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="bg-black rounded-xl border border-white/6 p-4 font-mono text-xs h-64 overflow-y-auto scroll-smooth"
+    >
       <div className="flex items-center gap-1.5 mb-3 pb-3 border-b border-white/5">
         <span className="w-3 h-3 rounded-full bg-red-500/60" />
         <span className="w-3 h-3 rounded-full bg-yellow-500/60" />
@@ -98,8 +127,6 @@ export default function RunAutomation() {
   const [selected,   setSelected]   = useState(["website", "whatsapp_bot", "seo"]);
   const [schedule,   setSchedule]   = useState("now");
   const [minScore,   setMinScore]   = useState(0.5);
-  const [keywords,   setKeywords]   = useState([]);
-  const [keywordInput, setKeywordInput] = useState("");
   const [status,     setStatus]     = useState("idle");
   const [logLines,   setLogLines]   = useState([]);
   const [leadsFound, setLeadsFound] = useState(0);
@@ -115,25 +142,13 @@ export default function RunAutomation() {
 
   const toggle = id => setSelected(p => p.includes(id) ? p.filter(j => j !== id) : [...p, id]);
 
-  const pendingKeywords = () => keywordInput.split(/[\n,]/).map(k => k.trim()).filter(Boolean);
-  const addKeywords = () => {
-    const additions = pendingKeywords();
-    if (!additions.length) return;
-    setKeywords(current => [...new Set([...current, ...additions])].slice(0, 10));
-    setKeywordInput("");
-  };
-  const removeKeyword = keyword => setKeywords(current => current.filter(k => k !== keyword));
-
   const startReal = async () => {
     if (!selected.length) return;
     setStatus("running"); setLogLines(["[INFO] Connecting to backend…"]);
     setLeadsFound(0); setProgress(5); setJobError(null);
 
     const service = selected.length === 1 ? selected[0] : null;
-    const runKeywords = [...new Set([...keywords, ...pendingKeywords()])].slice(0, 10);
-    setKeywords(runKeywords);
-    setKeywordInput("");
-    const { data, error } = await runJob({ service, min_score: minScore, keywords: runKeywords });
+    const { data, error } = await runJob({ service, min_score: minScore });
     if (error) { setLogLines(p => [...p, `[ERROR] ${error}`]); setStatus("failed"); setJobError(error); return; }
 
     const jid = data.job_id;
@@ -228,41 +243,6 @@ export default function RunAutomation() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-              className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/6">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Business Search Keywords</p>
-                <span className="text-xs text-zinc-600">Optional · up to 10</span>
-              </div>
-              <p className="text-zinc-600 text-xs mb-3">Add a business type, service, or location. These replace the default search terms for this run.</p>
-              <div className="flex gap-2">
-                <input
-                  value={keywordInput}
-                  onChange={e => setKeywordInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeywords(); } }}
-                  placeholder="e.g. dental clinics in Mumbai"
-                  maxLength={160}
-                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-orange-500/60"
-                />
-                <button type="button" onClick={addKeywords} disabled={!keywordInput.trim()}
-                  className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">
-                  Add
-                </button>
-              </div>
-              {keywords.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {keywords.map(keyword => (
-                    <span key={keyword} className="inline-flex max-w-full items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-200">
-                      <span className="truncate">{keyword}</span>
-                      <button type="button" onClick={() => removeKeyword(keyword)} aria-label={`Remove ${keyword}`} className="text-orange-300 hover:text-white">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 }}
               className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/6">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-4">Schedule</p>
               <div className="space-y-2">

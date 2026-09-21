@@ -20,7 +20,6 @@ export default function Navbar() {
     { to: "/#services",     label: "Services",     isHash: true  },
     { to: "/#how-it-works", label: "How It Works", isHash: true  },
     { to: "/dashboard",     label: "Dashboard",    isHash: false },
-    { to: "/analytics",     label: "Analytics",    isHash: false },
     { to: "/#contact",      label: "Contact",      isHash: true  },
   ];
 

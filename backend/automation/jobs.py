@@ -450,6 +450,15 @@ Return JSON:
                 max_tokens=600,
             )
             qual = json.loads(qualification_raw)
+            
+            # Log what the LLM actually returned
+            logger.debug(
+                "LLM qualification response for %s: score=%.2f, is_real_business=%s",
+                candidate.get("business_name", "unknown"),
+                qual.get("score", 0),
+                qual.get("is_real_business", False),
+            )
+            
         except Exception as exc:
             logger.error("Qualification LLM error for %s: %s", url, exc)
             return None
@@ -520,18 +529,24 @@ Return JSON:
         # STAGE 4: Contact Information Extraction & Website Detection
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         
-        # Extract website from source_url if it's the business website
-        website = qual.get("website")
+        # Use candidate data from Google Places API first (most reliable)
+        website = candidate.get("website") or candidate.get("websiteUri") or qual.get("website")
+        
+        # If still no website, try to extract from source_url (if it's not a content source)
         if not website and url:
-            # Check if source_url is likely the business website
             from urllib.parse import urlparse
             parsed = urlparse(url)
             if parsed.netloc and not self._is_content_source(url):
-                # Extract domain as website
-                website = f"{parsed.scheme}://{parsed.netloc}"
+                # Only use as website if it's a real domain, not Google Maps
+                if "google.com" not in parsed.netloc.lower():
+                    website = f"{parsed.scheme}://{parsed.netloc}"
         
-        phones = [candidate["phone"]] if candidate.get("phone") else []
+        # Get phone from Google Places data (most reliable)
+        phones = []
+        if candidate.get("phone"):
+            phones.append(candidate["phone"])
         
+        # Try LLM extraction as fallback/supplement
         try:
             contact_raw = await self.llm.complete(
                 prompt=self.contact_extraction_prompt(content),
@@ -539,21 +554,29 @@ Return JSON:
                 max_tokens=512,
             )
             contacts = json.loads(contact_raw)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Contact extraction LLM failed: %s", exc)
             contacts = {"emails": [], "phones": []}
         
+        # Extract emails and additional phones from LLM
         emails = contacts.get("emails", []) if isinstance(contacts.get("emails"), list) else []
         extracted_phones = contacts.get("phones", []) if isinstance(contacts.get("phones"), list) else []
-        phones.extend(phone for phone in extracted_phones if phone not in phones)
         
-        # Update website from contacts if not already set
-        if not website:
+        # Add LLM-extracted phones if not already present
+        for phone in extracted_phones:
+            if phone and phone not in phones:
+                phones.append(phone)
+        
+        # Update website from LLM extraction if we still don't have one
+        if not website and contacts.get("website"):
             website = contacts.get("website")
         
-        # Must have at least ONE contact method
-        has_contact_path = bool(website or emails or phones)
+        # Important: Missing website should NOT disqualify the lead!
+        # A business can still be a valid lead with just name + phone + address
+        has_contact_path = bool(website or emails or phones or candidate.get("address"))
+        
         if not has_contact_path:
-            logger.debug("❌ REJECTED: No contact path - %s", url)
+            logger.debug("❌ REJECTED: No contact path (no website, email, phone, or address) - %s", url)
             return None
         
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -561,25 +584,46 @@ Return JSON:
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         
         import uuid
+        
+        # Get rating from Google Places if available
+        rating = candidate.get("rating")
+        
+        # Log the final score being used
+        logger.debug(
+            "Creating lead for %s with qualification_score=%.2f (from LLM)",
+            business_name,
+            score,
+        )
+        
         lead = Lead(
             id=str(uuid.uuid4()),
-            source_url=url,
+            source_url=url or candidate.get("google_maps_url", ""),
             business_name=business_name.strip(),
             service_needed=self.SERVICE_LABEL,
             contact_email=emails,
             contact_phone=phones,
-            website=website,
+            website=website,  # Can be None - that's OK!
             pain_points=pain_points,
             qualification_score=score,
             raw_snippet=content[:500],
-            location=candidate.get("location") or qual.get("location", ""),
+            location=candidate.get("location") or candidate.get("address") or qual.get("location", ""),
             industry=candidate.get("industry") or qual.get("industry", ""),
             latitude=candidate.get("latitude"),
             longitude=candidate.get("longitude"),
             distance_km=candidate.get("distance_km"),
         )
         
-        logger.info("✅ VALID LEAD: %s (score=%.2f) - %s", business_name, score, url)
+        # Add rating if available
+        if rating:
+            lead.notes = f"Rating: {rating}"
+        
+        logger.info(
+            "✅ VALID LEAD: %s | Website: %s | Phone: %s | Score: %.2f",
+            business_name,
+            website or "None",
+            phones[0] if phones else "None",
+            score,
+        )
         return lead
 
     async def _run_with_search_api(self, started_at: str) -> JobResult:
@@ -600,14 +644,21 @@ Return JSON:
                 # Filter results before processing
                 filtered_results = []
                 for item in results:
-<<<<<<< HEAD
-                    url = item["url"]
+                    # Get business name - REQUIRED
+                    business_name = item.get("business_name") or item.get("name", "")
+                    if not business_name:
+                        logger.debug("[%s] Skipping result with no business name", self.JOB_NAME)
+                        continue
                     
-                    # Skip content sources
-                    if self._is_content_source(url):
+                    # Get URL - can be empty for businesses without websites
+                    url = item.get("url") or item.get("website") or item.get("google_maps_url") or ""
+                    
+                    # If URL exists, check if it's a content source
+                    if url and self._is_content_source(url):
                         logger.debug("[%s] Skipping content source: %s", self.JOB_NAME, url)
                         continue
                     
+                    # URL can be empty - that's OK! We can still qualify based on name/phone/address
                     filtered_results.append(item)
                     
                     if len(filtered_results) >= self.RESULTS_PER_QUERY:
@@ -617,57 +668,41 @@ Return JSON:
                 
                 # Qualify filtered results
                 for item in filtered_results:
-                    url = item["url"]
+                    # Get identifying information
+                    business_name = item.get("business_name") or item.get("name", "Unknown Business")
+                    url = item.get("url") or item.get("website") or item.get("google_maps_url") or ""
+                    phone = item.get("phone") or ""
+                    
+                    # Log what we're processing
+                    logger.debug(
+                        "[%s] Processing: %s | URL: %s | Phone: %s",
+                        self.JOB_NAME,
+                        business_name,
+                        url or "None",
+                        phone or "None",
+                    )
+                    
                     try:
                         # Pass the full item as candidate so coordinates are included
+                        # URL can be empty string - qualification should handle it
                         lead = await self._qualify_lead(
                             content=item.get("content", "")[:6000],
-                            url=url,
-                            candidate=item  # Pass full item with lat/lng/distance
+                            url=url or business_name,  # Use business name as fallback identifier
+                            candidate=item  # Pass full item with lat/lng/distance/phone/etc
                         )
-=======
-                    # Extract contact info directly from API result
-                    url = item.get("website") or item.get("url", "")
-                    business_name = item.get("name", "Unknown")
-                    phone = item.get("phone", "")
-                    email = item.get("email", "")
-                    address = item.get("address", "")
-                    rating = item.get("rating", "N/A")
-                    
-                    # Skip if no contact info
-                    if not (phone or email):
-                        logger.debug("[%s] Skipping %s - no phone or email", self.JOB_NAME, business_name)
-                        continue
-                    
-                    try:
-                        # Qualify based on content
-                        lead = await self._qualify_lead(item.get("content", "")[:6000], url or business_name)
->>>>>>> bee865b1c38482700b7eadb39e940580c6cd2cdc
                         if lead:
-                            # Override with actual contact info from API
-                            lead.business_name = business_name
-                            lead.contact_phone = [phone] if phone else []
-                            lead.contact_email = [email] if email else []
-                            lead.website = url
-                            lead.source_url = url or business_name
-                            
                             leads.append(lead)
-<<<<<<< HEAD
-                            logger.info("[%s] Lead found: %s (score=%.2f, distance=%.1fkm)", 
-                                      self.JOB_NAME, lead.business_name, lead.qualification_score, 
-                                      lead.distance_km if lead.distance_km else 0)
-=======
                             logger.info(
-                                "[%s] Lead found: %s | Phone: %s | Email: %s (score=%.2f)", 
-                                self.JOB_NAME, 
-                                business_name, 
-                                phone or "N/A",
-                                email or "N/A",
-                                lead.qualification_score
+                                "[%s] ✓ Lead found: %s | Website: %s | Phone: %s | Distance: %.1fkm | Score: %.2f", 
+                                self.JOB_NAME,
+                                lead.business_name,
+                                lead.website or "None",
+                                lead.contact_phone[0] if lead.contact_phone else "None",
+                                lead.distance_km if lead.distance_km else 0,
+                                lead.qualification_score,
                             )
->>>>>>> bee865b1c38482700b7eadb39e940580c6cd2cdc
                     except Exception as exc:
-                        err = f"API result qualification error [{business_name}]: {exc}"
+                        err = f"API result qualification error [{item.get('name', 'unknown')}]: {exc}"
                         logger.error(err)
                         errors.append(err)
             except Exception as exc:

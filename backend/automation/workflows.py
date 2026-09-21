@@ -34,6 +34,7 @@ from automation.jobs import (
     SEOLeadJob,
 )
 from filters.business_filter import BusinessFilter, FilterPriority
+from intelligence.clorel_qualifier import ClorelQualifier, LeadRouting
 
 logger = logging.getLogger(__name__)
 
@@ -248,15 +249,20 @@ class LeadWorkflow:
         min_score: float = 0.5,
         output_dir: str = "leads_output",
         search_queries: Optional[List[str]] = None,
+        use_clorel: bool = True,  # Enable CLOREL evidence-based qualification
+        campaign: Optional[Dict[str, Any]] = None,
     ):
         self.llm_config = llm_config or LLMConfig.from_env()
         self.crawler_config = crawler_config or CrawlerConfig(headless=True, page_timeout=20000)
         self.min_score = min_score
         self.output_dir = output_dir
         self.search_queries = search_queries or []
+        self.use_clorel = use_clorel
+        self.campaign = campaign or {}
 
         llm = LLMClient(self.llm_config)
         self.qualifier = LeadQualifier(llm)
+        self.clorel_qualifier = ClorelQualifier(llm)  # CLOREL evidence-based qualifier
         self.composer  = OutreachComposer(llm)
         self.runner    = JobRunner(self.crawler_config, self.llm_config)
         self.biz_filter = BusinessFilter(llm)
@@ -277,6 +283,72 @@ class LeadWorkflow:
             json.dump(data, f, indent=2, ensure_ascii=False)
         logger.info("Saved → %s", path)
         return path
+    
+    def _lead_to_dict(self, lead: Lead) -> dict:
+        """Convert Lead object to dict for CLOREL processing."""
+        return {
+            "id": lead.id,
+            "business_name": lead.business_name,
+            "source_url": lead.source_url,
+            "website": lead.website,
+            "contact_email": lead.contact_email,
+            "contact_phone": lead.contact_phone,
+            "address": lead.location if isinstance(lead.location, str) else "",
+            "city": getattr(lead, "city", ""),
+            "state": getattr(lead, "state", ""),
+            "country": getattr(lead, "country", ""),
+            "industry": lead.industry,
+            "rating": getattr(lead, "rating", None),
+            "review_count": getattr(lead, "review_count", None),
+            "distance_km": lead.distance_km,
+            "latitude": lead.latitude,
+            "longitude": lead.longitude,
+            "pain_points": lead.pain_points,
+            "raw_snippet": lead.raw_snippet,
+            "website_status": getattr(lead, "website_status", "unverified"),
+            "discovered_at": lead.discovered_at,
+        }
+    
+    def _clorel_to_lead(self, clorel_lead) -> Lead:
+        """Convert ClorelLead back to Lead object."""
+        from automation.jobs import Lead as JobLead
+        
+        lead = JobLead(
+            id=clorel_lead.id,
+            source_url=clorel_lead.source_url,
+            business_name=clorel_lead.business_name,
+            service_needed=clorel_lead.service_needed,
+            contact_email=clorel_lead.contact_email,
+            contact_phone=clorel_lead.contact_phone,
+            website=clorel_lead.website,
+            pain_points=clorel_lead.pain_points,
+            qualification_score=clorel_lead.qualification_score,
+            raw_snippet="",  # Not preserved in CLOREL
+            location=clorel_lead.location.address,
+            industry=clorel_lead.industry,
+            discovered_at=clorel_lead.discovered_at,
+            latitude=clorel_lead.location.latitude,
+            longitude=clorel_lead.location.longitude,
+            distance_km=clorel_lead.location.distance_km,
+        )
+        
+        # Transfer CLOREL-specific fields
+        lead.filter_priority = clorel_lead.filter_priority
+        lead.filter_justification = clorel_lead.filter_justification
+        lead.filter_reasoning = clorel_lead.filter_reasoning
+        lead.filter_online_score = clorel_lead.online_presence_score
+        lead.filter_suitability_score = clorel_lead.service_fit_score
+        lead.filter_recommended = clorel_lead.filter_recommended
+        
+        # Add CLOREL evidence to notes
+        lead.notes = (
+            f"Routing: {clorel_lead.routing.value} | "
+            f"Confidence: {clorel_lead.confidence:.0%} | "
+            f"Service fit: {clorel_lead.service_fit_score:.1f}/10 | "
+            f"Evidence: {len(clorel_lead.evidence)} items"
+        )
+        
+        return lead
 
     # ------------------------------------------------------------------
     # Pipeline steps
@@ -299,10 +371,47 @@ class LeadWorkflow:
         return all_leads
 
     async def step_qualify(self, leads: List[Lead]) -> List[Lead]:
-        """Step 2: Filter and enrich leads."""
-        qualified = await self.qualifier.filter_and_enrich(leads, self.min_score)
-        logger.info("After qualification: %d leads", len(qualified))
-        return qualified
+        """
+        Step 2: Filter and enrich leads.
+        
+        When use_clorel=True (default):
+          Uses CLOREL evidence-based qualification framework
+          
+        When use_clorel=False:
+          Uses legacy score-based qualification
+        """
+        if self.use_clorel:
+            logger.info("[CLOREL] Running evidence-based qualification on %d leads", len(leads))
+            
+            # Convert Lead objects to dicts for CLOREL
+            leads_data = [self._lead_to_dict(l) for l in leads]
+            
+            # Run CLOREL qualification
+            clorel_leads = await self.clorel_qualifier.qualify_batch(leads_data, self.campaign)
+            
+            # Filter by routing: keep only sales_review and hold
+            qualified = [
+                self._clorel_to_lead(cl) for cl in clorel_leads
+                if cl.routing in [LeadRouting.SALES_REVIEW, LeadRouting.HOLD]
+            ]
+            
+            sales_review_count = sum(1 for cl in clorel_leads if cl.routing == LeadRouting.SALES_REVIEW)
+            hold_count = sum(1 for cl in clorel_leads if cl.routing == LeadRouting.HOLD)
+            retry_count = sum(1 for cl in clorel_leads if cl.routing == LeadRouting.RETRY)
+            reject_count = sum(1 for cl in clorel_leads if cl.routing == LeadRouting.REJECT)
+            
+            logger.info(
+                "[CLOREL] Results: %d sales_review, %d hold, %d retry, %d reject",
+                sales_review_count, hold_count, retry_count, reject_count,
+            )
+            logger.info("[CLOREL] After qualification: %d leads", len(qualified))
+            
+            return qualified
+        else:
+            # Legacy qualification
+            qualified = await self.qualifier.filter_and_enrich(leads, self.min_score)
+            logger.info("After qualification: %d leads", len(qualified))
+            return qualified
 
     async def step_filter(self, leads: List[Lead]) -> List[Lead]:
         """
